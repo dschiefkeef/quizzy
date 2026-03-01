@@ -210,17 +210,17 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
      CREDIT — edit "made by" text here
      Also edit in credplay.html (player file)
      ═══════════════════════════════════ -->
-<div class="credit">TRAP QUIZ · made by YUNG CODER</div>
+<div class="credit">QUIZZY made by Denis</div>
 
 <!-- ALL IN overlay -->
 <div class="mode-overlay" id="allin-overlay">
-  <div class="mo-big allin">⚡ ALL IN ⚡</div>
+  <div class="mo-big allin">🎰 ALL IN 🎰</div>
   <div class="mo-sub">Double or nothing · Players decide their fate</div>
 </div>
 
 <!-- BUZZER overlay -->
 <div class="mode-overlay" id="buzzer-overlay">
-  <div class="mo-big buzzer">🔔 BUZZER</div>
+  <div class="mo-big buzzer">🛎️ BUZZER 🛎️</div>
   <div class="mo-sub">First to answer correctly takes it all</div>
 </div>
 
@@ -239,7 +239,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- SETUP SCREEN -->
 <div class="screen active" id="setup-screen">
   <div class="setup-logo">TRAP<br>QUIZ</div>
-  <div class="setup-sub">Host Panel · A$AP · Keef · Carti</div>
+  <div class="setup-sub">Quiz of A$AP Rocky, Chief Keef & Playboi Carti</div>
   <div class="config-box">
     <label class="cfg-label">Room Code</label>
     <input class="cfg-input" id="room-id" type="text" placeholder="e.g. TRAP1" maxlength="6" autocomplete="off" spellcheck="false">
@@ -274,7 +274,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div class="q-prog"><div class="q-prog-fill" id="q-prog" style="width:10%"></div></div>
     <div class="mode-badge" id="mode-badge"></div>
     <span class="phase-pill waiting" id="phase-pill">THINKING</span>
-    <button class="btn-pause" id="btn-pause" onclick="togglePause()">⏸ PAUSE</button>
+    <button class="btn-pause" id="btn-pause" onclick="togglePause()">⏸ PAUSE ⏯️</button>
     <div class="timer-wrap">
       <svg class="t-ring" width="50" height="50" viewBox="0 0 50 50">
         <circle class="t-bg" cx="25" cy="25" r="22"/>
@@ -368,8 +368,8 @@ const QUESTIONS = [
     correct: 1,
     fact: "Rakim and Erika B — from Eric B. & Rakim. She named one child Rakim, the other Erika B. Rocky chose his own stage name later.",
     background: null,   /* ← 'assets/bg_q1.jpg' */
-    image: null,        /* ← 'assets/img_q1.jpg' */
-    music: null,        /* ← 'assets/q1.mp3' */
+    image:'asapprof.jpg',        /* ← 'assets/img_q1.jpg' */
+    music:'no9carti.mp3,        /* ← 'assets/q1.mp3' */
     mode: "normal"
   },
   {
@@ -466,9 +466,9 @@ const AUDIO = {
    Must be accessible via GitHub Pages (public repo).
    ─────────────────────────────────────────────────────────── */
 const AVATARS = {
-  rocky: 'assets/rocky.jpg',    /* ← A$AP Rocky photo */
-  keef:  'assets/keef.jpg',     /* ← Chief Keef photo  */
-  carti: 'assets/carti.jpg',    /* ← Playboi Carti photo */
+  rocky: 'asapprof.jpg',    /* ← A$AP Rocky photo */
+  keef:  'keefprof.jpg',     /* ← Chief Keef photo  */
+  carti: 'cartiprof.jpg',    /* ← Playboi Carti photo */
 };
 
 /* ───────────────────────────────────────────────────────────
