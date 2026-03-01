@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>TRAP QUIZ</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg:#050505; --gold:#d4a843; --green:#00ff88;
+  --red:#ff2d55; --white:#f0ece4; --dim:rgba(240,236,228,.38);
+  --box:rgba(0,0,0,.88); --boxb:rgba(255,255,255,.13);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--white);font-family:'Space Mono',monospace;overflow:hidden;touch-action:manipulation;}
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:9999;}
+
+/* ═══════════════════════════════════════
+   CREDIT — edit "made by" text here
+   Also edit in credshow.html (host file)
+   ═══════════════════════════════════════ */
+.credit{position:fixed;bottom:.5rem;right:.8rem;font-size:.44rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.15);pointer-events:none;z-index:500;}
+
+.screen{display:none;position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* ── JOIN ── */
+#join-screen{
+  align-items:center;justify-content:center;min-height:100%;
+  padding:2rem 1.5rem;text-align:center;
+  background:radial-gradient(ellipse at 50% 0%,rgba(212,168,67,.13) 0%,transparent 60%);
+}
+.join-logo{font-family:'Bebas Neue',cursive;font-size:clamp(3.5rem,18vw,7rem);line-height:.88;background:linear-gradient(135deg,var(--gold),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.35rem;}
+.join-sub{font-size:clamp(.48rem,2vw,.62rem);letter-spacing:.4em;text-transform:uppercase;color:var(--dim);margin-bottom:2rem;}
+.join-form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:.8rem;}
+.j-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:var(--white);font-family:'Space Mono',monospace;font-size:clamp(.88rem,4vw,1.08rem);padding:.95rem 1.2rem;outline:none;width:100%;border-radius:0;-webkit-appearance:none;transition:border-color .2s;}
+.j-input:focus{border-color:var(--gold);}
+.j-input::placeholder{color:rgba(255,255,255,.2);}
+
+/* Avatar picker */
+.av-section-label{font-size:.54rem;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:.5rem;text-align:left;}
+.av-row{display:flex;gap:.7rem;justify-content:center;}
+.av-opt{display:flex;flex-direction:column;align-items:center;gap:.32rem;cursor:pointer;padding:.4rem;border:2px solid transparent;border-radius:4px;background:rgba(255,255,255,.04);transition:all .2s;}
+.av-opt img{width:clamp(54px,15vw,72px);height:clamp(54px,15vw,72px);border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.12);}
+.av-fallback{display:none;width:clamp(54px,15vw,72px);height:clamp(54px,15vw,72px);border-radius:50%;background:#111;border:2px solid rgba(255,255,255,.12);align-items:center;justify-content:center;font-size:1.5rem;}
+.av-opt .av-name{font-size:.48rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);}
+.av-opt.sel{border-color:var(--gold);background:rgba(212,168,67,.1);}
+.av-opt.sel img,.av-opt.sel .av-fallback{border-color:var(--gold);}
+.av-opt.sel .av-name{color:var(--gold);}
+
+.join-btn{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',cursive;font-size:clamp(1.4rem,6vw,1.9rem);padding:.85rem;cursor:pointer;letter-spacing:.1em;width:100%;transition:all .2s;}
+.join-btn:active{transform:scale(.97);}
+.j-err{font-size:.6rem;color:var(--red);letter-spacing:.1em;text-align:center;min-height:.9rem;}
+
+/* ── LOBBY WAIT ── */
+#lobby-wait{
+  align-items:center;justify-content:center;text-align:center;
+  min-height:100%;padding:2rem 1.5rem;
+  background:radial-gradient(ellipse at 50% 0%,rgba(0,255,136,.06) 0%,transparent 60%);
+}
+.wait-av{margin-bottom:.5rem;}
+.wait-av img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--green);}
+.wait-av .av-fallback-lg{width:72px;height:72px;border-radius:50%;border:2px solid var(--green);background:#111;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:auto;}
+.wait-name{font-family:'Bebas Neue',cursive;font-size:clamp(2.5rem,12vw,4rem);color:var(--green);margin-bottom:.3rem;}
+.wait-msg{font-size:clamp(.5rem,2vw,.66rem);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:1.5rem;}
+.wait-dots span{animation:dot-pulse 1.4s ease infinite;display:inline-block;font-size:1.1rem;color:var(--gold);}
+.wait-dots span:nth-child(2){animation-delay:.2s;}.wait-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dot-pulse{0%,80%,100%{opacity:.2;transform:translateY(0)}40%{opacity:1;transform:translateY(-5px)}}
+
+.instructions-card{margin-top:2rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);padding:1.2rem 1.4rem;max-width:380px;width:100%;text-align:left;}
+.ic-title{font-family:'Bebas Neue',cursive;font-size:1.1rem;letter-spacing:.12em;color:var(--gold);margin-bottom:.9rem;}
+.ic-row{display:flex;gap:.75rem;align-items:flex-start;margin-bottom:.75rem;}
+.ic-row:last-child{margin-bottom:0;}
+.ic-icon{font-size:1.4rem;flex-shrink:0;margin-top:-.1rem;}
+.ic-text{font-size:.58rem;line-height:1.75;color:var(--dim);letter-spacing:.04em;}
+.ic-text strong{color:var(--white);font-weight:700;}
+
+/* ── ALL IN DECISION ── */
+#allin-screen{
+  align-items:center;justify-content:center;text-align:center;
+  min-height:100%;padding:2rem 1.5rem;
+  background:radial-gradient(ellipse at 50% 100%,rgba(212,168,67,.16) 0%,transparent 60%);
+}
+.ai-title{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,14vw,5.5rem);background:linear-gradient(135deg,var(--gold),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:.5rem;}
+.ai-sub{font-size:clamp(.56rem,2.2vw,.72rem);letter-spacing:.28em;text-transform:uppercase;color:var(--dim);margin-bottom:.4rem;line-height:1.8;}
+.ai-stakes{font-family:'Bebas Neue',cursive;font-size:clamp(1rem,4vw,1.3rem);color:var(--gold);margin-bottom:2.2rem;}
+.ai-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+.ai-btn{font-family:'Bebas Neue',cursive;font-size:clamp(1.3rem,5vw,1.7rem);padding:.95rem 2rem;border:none;cursor:pointer;letter-spacing:.1em;transition:all .2s;min-width:130px;}
+.ai-btn.yes{background:var(--gold);color:#000;}.ai-btn.no{background:transparent;border:1px solid rgba(255,255,255,.25);color:var(--white);}
+.ai-btn:active{transform:scale(.95);}.ai-btn:disabled{opacity:.5;cursor:not-allowed;}
+.ai-decided{font-size:clamp(.62rem,2.5vw,.78rem);letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-top:1.4rem;}
+
+/* ── BUZZER SCREEN ── */
+#buzzer-screen{
+  align-items:center;justify-content:center;text-align:center;
+  min-height:100%;padding:2rem 1.5rem;
+  background:radial-gradient(ellipse at 50% 50%,rgba(0,255,136,.12) 0%,transparent 60%);
+}
+.bz-title{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,14vw,5.5rem);background:linear-gradient(135deg,var(--green),#00ccff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:.5rem;}
+.bz-sub{font-size:clamp(.56rem,2.2vw,.72rem);letter-spacing:.28em;text-transform:uppercase;color:var(--dim);margin-bottom:.4rem;line-height:1.8;}
+.bz-note{font-size:clamp(.5rem,2vw,.64rem);color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:1.5rem;}
+/* Buzzer: host must show options first. No answer buttons here. */
+.bz-waiting{font-size:clamp(.7rem,3vw,.9rem);color:var(--dim);letter-spacing:.15em;text-transform:uppercase;margin-top:1.5rem;display:none;}
+.bz-waiting.show{display:block;animation:blink-fade 1s ease infinite;}
+@keyframes blink-fade{0%,100%{opacity:.3}50%{opacity:1}}
+.bz-lost{font-size:clamp(.7rem,2.5vw,.85rem);color:var(--red);letter-spacing:.15em;text-transform:uppercase;margin-top:1.5rem;display:none;}
+.bz-lost.show{display:block;}
+
+/* ── QUESTION SCREEN ── */
+#q-screen{
+  position:fixed;inset:0;
+  display:none;flex-direction:column;
+  justify-content:space-between;
+  gap:.45rem;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  padding:max(env(safe-area-inset-top),.6rem) .6rem max(env(safe-area-inset-bottom),.6rem);
+}
+#q-screen.active{display:flex;}
+.q-bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:0;pointer-events:none;}
+#q-screen>*{position:relative;z-index:1;}
+
+.q-top{display:flex;justify-content:space-between;align-items:center;flex-shrink:0;padding:.4rem .65rem;background:var(--box);border:1px solid var(--boxb);backdrop-filter:blur(8px);}
+.q-num-lbl{font-size:clamp(.48rem,1.8vw,.64rem);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);}
+.q-mode-badge{font-family:'Bebas Neue',cursive;font-size:clamp(.56rem,2vw,.72rem);padding:.15rem .6rem;letter-spacing:.14em;display:none;}
+.q-mode-badge.allin{display:inline-block;background:linear-gradient(135deg,var(--gold),var(--red));color:#000;animation:lpulse .5s ease infinite alternate;}
+.q-mode-badge.buzzer{display:inline-block;background:var(--green);color:#000;}
+@keyframes lpulse{from{box-shadow:0 0 6px rgba(212,168,67,.5)}to{box-shadow:0 0 18px rgba(255,45,85,.8)}}
+
+/* Timer pill with number */
+.timer-pill{display:flex;align-items:center;gap:.45rem;}
+.timer-bar-wrap{width:80px;height:5px;background:rgba(255,255,255,.09);border-radius:2px;}
+.timer-bar{height:100%;background:var(--gold);transition:width 1s linear;border-radius:2px;}
+.timer-num{font-family:'Bebas Neue',cursive;font-size:1.1rem;color:var(--gold);min-width:1.8rem;text-align:right;}
+
+.q-sec-lbl{font-size:clamp(.44rem,1.6vw,.56rem);letter-spacing:.34em;text-transform:uppercase;color:var(--gold);padding:.2rem .65rem;flex-shrink:0;background:var(--box);border:1px solid var(--boxb);backdrop-filter:blur(6px);align-self:flex-start;}
+.q-text-area{font-family:'Bebas Neue',cursive;font-size:clamp(1.05rem,4.8vw,1.7rem);line-height:1.2;flex-shrink:0;padding:.5rem .75rem;background:var(--box);border:1px solid var(--boxb);backdrop-filter:blur(8px);}
+
+/* Question image */
+.q-image-inline{flex-shrink:0;text-align:center;display:none;padding:.3rem .65rem;}
+.q-image-inline.show{display:block;}
+.q-image-inline img{max-width:100%;max-height:100px;object-fit:contain;border:1px solid rgba(255,255,255,.15);}
+
+.answers-list{display:flex;flex-direction:column;gap:clamp(.3rem,1.2vw,.52rem);flex-shrink:0;}
+.ans-btn{padding:clamp(.58rem,2.1vw,.88rem) clamp(.75rem,2.8vw,1.15rem);background:var(--box);border:1px solid rgba(255,255,255,.13);color:var(--white);font-family:'Space Mono',monospace;font-size:clamp(.62rem,2.3vw,.8rem);text-align:left;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:.62rem;-webkit-appearance:none;border-radius:0;width:100%;line-height:1.4;backdrop-filter:blur(5px);}
+.ans-btn:active:not(:disabled){transform:scale(.98);background:rgba(255,255,255,.1);}
+.ans-ltr{font-family:'Bebas Neue',cursive;font-size:clamp(.88rem,3.2vw,1.1rem);opacity:.38;flex-shrink:0;width:1rem;text-align:center;}
+.ans-btn.selected{background:rgba(212,168,67,.13);border-color:var(--gold);color:var(--gold);}
+.ans-btn.selected .ans-ltr{opacity:1;color:var(--gold);}
+.ans-btn.correct{background:rgba(0,255,136,.16);border-color:var(--green);color:var(--green);}
+.ans-btn.correct .ans-ltr{opacity:1;color:var(--green);}
+.ans-btn.wrong{background:rgba(255,45,85,.07);border-color:rgba(255,45,85,.22);opacity:.42;}
+.ans-btn:disabled{cursor:not-allowed;}
+
+/* Missing bar */
+.miss-wrap{flex-shrink:0;padding:.24rem .65rem;background:var(--box);border:1px solid var(--boxb);}
+.miss-ttl{font-size:clamp(.42rem,1.4vw,.54rem);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:.28rem;}
+.miss-chips{display:flex;flex-wrap:wrap;gap:.24rem;}
+.m-ch{font-size:.52rem;letter-spacing:.05em;padding:.1rem .42rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--dim);transition:all .3s;}
+.m-ch.done{background:rgba(0,255,136,.06);border-color:rgba(0,255,136,.2);color:rgba(0,255,136,.55);text-decoration:line-through;opacity:.5;}
+
+/* ── WAIT REVEAL ── */
+#wait-reveal{align-items:center;justify-content:center;text-align:center;min-height:100%;padding:2rem;}
+.wr-icon{font-size:clamp(3rem,12vw,4.5rem);margin-bottom:.8rem;animation:spin 2s linear infinite;}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.wr-msg{font-family:'Bebas Neue',cursive;font-size:clamp(1.5rem,7vw,2.2rem);margin-bottom:.35rem;}
+.wr-sub{font-size:clamp(.5rem,2vw,.66rem);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);}
+
+/* ── RESULT ── */
+#result-screen{
+  align-items:stretch;justify-content:flex-start;
+  min-height:100%;padding:clamp(1rem,3vw,1.5rem);
+  overflow-y:auto;gap:.75rem;
+}
+.res-card{background:var(--box);border:1px solid var(--boxb);backdrop-filter:blur(12px);padding:.9rem 1.1rem;}
+.res-header{display:flex;align-items:center;gap:.85rem;margin-bottom:.6rem;}
+.res-icon{font-size:clamp(2.2rem,8vw,3.2rem);flex-shrink:0;}
+.res-verdict{flex:1;}
+.res-lbl{font-size:clamp(.52rem,1.8vw,.66rem);letter-spacing:.38em;text-transform:uppercase;margin-bottom:.18rem;}
+.res-pts{font-family:'Bebas Neue',cursive;font-size:clamp(2rem,8vw,3rem);line-height:1;}
+.res-total-txt{font-size:clamp(.44rem,1.5vw,.58rem);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);}
+.res-answer-row{margin-bottom:.5rem;}
+.res-answer-lbl{font-size:.48rem;letter-spacing:.32em;text-transform:uppercase;color:var(--dim);margin-bottom:.18rem;}
+.res-answer{font-family:'Bebas Neue',cursive;font-size:clamp(1rem,4vw,1.4rem);line-height:1.15;}
+.res-fact-box{background:rgba(255,255,255,.03);border-left:2px solid rgba(255,255,255,.18);padding:.6rem .9rem;}
+.res-fact{font-size:clamp(.56rem,2vw,.7rem);line-height:1.82;color:var(--dim);}
+.res-streak{font-size:clamp(.58rem,2vw,.72rem);color:var(--gold);letter-spacing:.12em;text-align:center;}
+.res-rank-title{font-size:.5rem;letter-spacing:.38em;text-transform:uppercase;color:var(--dim);margin-bottom:.4rem;}
+.nearby-row{display:flex;align-items:center;gap:.65rem;padding:.32rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:clamp(.6rem,2.2vw,.74rem);}
+.nearby-row.me{color:var(--gold);}
+.nb-pos{font-family:'Bebas Neue',cursive;font-size:1.05rem;width:1.4rem;text-align:right;flex-shrink:0;}
+.nb-av{width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.nb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── FINAL ── */
+#final-screen{
+  padding:clamp(1.2rem,4vw,2rem);align-items:center;justify-content:center;text-align:center;
+  min-height:100%;overflow-y:auto;
+  background:radial-gradient(ellipse at 50% 100%,rgba(212,168,67,.1) 0%,transparent 60%);
+}
+.final-title{font-family:'Bebas Neue',cursive;font-size:clamp(2.5rem,10vw,4rem);line-height:1;margin-bottom:.3rem;}
+.final-av img{width:68px;height:68px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);}
+.final-av .av-fallback-lg{width:68px;height:68px;border-radius:50%;border:3px solid var(--gold);background:#111;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto .35rem;}
+.final-rank{font-family:'Bebas Neue',cursive;font-size:clamp(4.5rem,18vw,7rem);line-height:1;animation:popIn .5s cubic-bezier(.34,1.56,.64,1);}
+.final-rank.gold-glow{color:var(--gold);text-shadow:0 0 60px rgba(212,168,67,.8),0 0 120px rgba(212,168,67,.4);}
+.final-rank.silver-glow{color:#c0c0c0;text-shadow:0 0 40px rgba(192,192,192,.7);}
+.final-rank.bronze-glow{color:#cd7f32;text-shadow:0 0 40px rgba(205,127,50,.7);}
+.final-rank.default-color{color:var(--white);}
+.final-rank-label{font-size:clamp(.5rem,2vw,.7rem);letter-spacing:.35em;text-transform:uppercase;margin-bottom:.3rem;}
+.final-name{font-size:clamp(.5rem,2vw,.66rem);letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:.5rem;}
+.final-score{font-family:'Bebas Neue',cursive;font-size:clamp(1.8rem,7vw,2.8rem);color:var(--green);}
+.final-list{margin-top:1rem;width:100%;max-width:360px;text-align:left;}
+.fl-row{display:flex;align-items:center;gap:.8rem;padding:.44rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:clamp(.64rem,2.3vw,.78rem);}
+.fl-row.me{color:var(--gold);}
+.fl-pos{font-family:'Bebas Neue',cursive;font-size:1.15rem;width:1.5rem;}
+.fl-av{width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.fl-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fl-sc{font-family:'Bebas Neue',cursive;font-size:.9rem;flex-shrink:0;}
+.rank-wait{font-size:clamp(.56rem,2vw,.7rem);letter-spacing:.28em;text-transform:uppercase;color:var(--dim);margin-top:1rem;}
+.red-screen{position:fixed;inset:0;background:rgba(255,45,85,.12);border:2px solid rgba(255,45,85,.4);pointer-events:none;z-index:0;display:none;}
+.red-screen.show{display:block;}
+
+/* ── KICKED ── */
+#kicked-screen{
+  align-items:center;justify-content:center;text-align:center;
+  min-height:100%;padding:2rem;
+  background:radial-gradient(ellipse at 50% 100%,rgba(255,45,85,.08) 0%,transparent 60%);
+}
+.kick-icon{font-size:4rem;margin-bottom:.9rem;}
+.kick-title{font-family:'Bebas Neue',cursive;font-size:clamp(2.5rem,10vw,4rem);color:var(--red);margin-bottom:.5rem;}
+.kick-msg{font-size:clamp(.62rem,2.5vw,.76rem);letter-spacing:.14em;color:var(--dim);line-height:1.8;margin-bottom:2rem;max-width:320px;}
+.kick-retry{background:var(--gold);color:#000;border:none;font-family:'Bebas Neue',cursive;font-size:1.4rem;padding:.75rem 2.2rem;cursor:pointer;letter-spacing:.1em;transition:all .2s;}
+.kick-retry:active{transform:scale(.97);}
+
+/* ── OVERLAYS ── */
+.flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:9000;transition:opacity .05s;}.flash.on{opacity:1;}
+.mode-splash{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:800;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:2rem;}
+.mode-splash.show{display:flex;animation:fadeIn .3s;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.ms-big{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,14vw,5rem);line-height:1.05;}
+.ms-big.allin{background:linear-gradient(135deg,var(--gold),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ms-big.buzzer{background:linear-gradient(135deg,var(--green),#00ccff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ms-sub{font-size:clamp(.54rem,2vw,.7rem);letter-spacing:.44em;text-transform:uppercase;color:var(--dim);margin-top:.5rem;}
+.badge-ov{position:fixed;inset:0;pointer-events:none;z-index:700;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .1s;}
+.badge-ov.show{opacity:1;}.badge-ov.hide{opacity:0;transition:opacity .4s;}
+.badge-txt{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,15vw,6rem);letter-spacing:.05em;padding:.65rem 1.5rem;animation:badgePop .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes badgePop{from{transform:scale(.2) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.badge-txt.good{color:var(--green);text-shadow:0 0 40px rgba(0,255,136,.6);border:3px solid var(--green);background:rgba(0,255,136,.07);}
+.badge-txt.bad{color:var(--red);text-shadow:0 0 40px rgba(255,45,85,.6);border:3px solid var(--red);background:rgba(255,45,85,.07);}
+.win-flash{position:fixed;inset:0;pointer-events:none;z-index:500;opacity:0;transition:opacity .3s;}
+.win-flash.show{opacity:1;animation:winPulse 1.5s ease infinite alternate;}
+@keyframes winPulse{from{background:rgba(212,168,67,.12)}to{background:rgba(212,168,67,.3)}}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* Landscape */
+@media (orientation:landscape) and (max-height:500px) {
+  #q-screen{flex-direction:row;flex-wrap:wrap;align-items:stretch;}
+  .q-top,.q-sec-lbl{width:100%;}
+  .q-text-area{width:48%;flex:1;}
+  .answers-list{width:50%;}
+  .miss-wrap{width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="flash" id="flash"></div>
+<div class="win-flash" id="win-flash"></div>
+<div class="badge-ov" id="badge-ov"><div class="badge-txt" id="badge-txt"></div></div>
+<div class="mode-splash" id="allin-splash">
+  <div class="ms-big allin">⚡ ALL IN ⚡</div>
+  <div class="ms-sub">Double or nothing · Your call</div>
+</div>
+<div class="mode-splash" id="buzzer-splash">
+  <div class="ms-big buzzer">🔔 BUZZER</div>
+  <div class="ms-sub">First correct answer wins it all</div>
+</div>
+
+<!-- ═══════════════════════════════════
+     CREDIT — edit "made by" text here
+     Also edit in credshow.html (host file)
+     ═══════════════════════════════════ -->
+<div class="credit">TRAP QUIZ · made by YUNG CODER</div>
+
+<!-- JOIN -->
+<div class="screen active" id="join-screen">
+  <div class="join-logo">TRAP<br>QUIZ</div>
+  <div class="join-sub">A$AP · Keef · Carti</div>
+  <div class="join-form">
+    <input class="j-input" id="inp-room" type="text" placeholder="Room Code" maxlength="6"
+           autocomplete="off" spellcheck="false" autocapitalize="characters">
+    <input class="j-input" id="inp-name" type="text" placeholder="Your name" maxlength="16" autocomplete="off">
+    <div class="av-section-label">Choose your artist</div>
+    <div class="av-row" id="av-row">
+      <div class="av-opt sel" data-key="rocky" onclick="selectAv(this)">
+        <img id="av-img-rocky" src="" alt="A$AP Rocky"
+             onerror="this.style.display='none';document.getElementById('av-fb-rocky').style.display='flex'">
+        <div class="av-fallback" id="av-fb-rocky">🎤</div>
+        <div class="av-name">A$AP Rocky</div>
+      </div>
+      <div class="av-opt" data-key="keef" onclick="selectAv(this)">
+        <img id="av-img-keef" src="" alt="Chief Keef"
+             onerror="this.style.display='none';document.getElementById('av-fb-keef').style.display='flex'">
+        <div class="av-fallback" id="av-fb-keef">🖤</div>
+        <div class="av-name">Chief Keef</div>
+      </div>
+      <div class="av-opt" data-key="carti" onclick="selectAv(this)">
+        <img id="av-img-carti" src="" alt="Playboi Carti"
+             onerror="this.style.display='none';document.getElementById('av-fb-carti').style.display='flex'">
+        <div class="av-fallback" id="av-fb-carti">⚡</div>
+        <div class="av-name">Playboi Carti</div>
+      </div>
+    </div>
+    <button class="join-btn" onclick="joinGame()">CONTINUAR →</button>
+    <div class="j-err" id="j-err"></div>
+  </div>
+</div>
+
+<!-- LOBBY WAIT -->
+<div class="screen" id="lobby-wait">
+  <div class="wait-av" id="wait-av">
+    <img id="wait-av-img" src="" alt=""
+         onerror="this.style.display='none';document.getElementById('wait-av-fallback').style.display='flex'">
+    <div class="av-fallback-lg" id="wait-av-fallback" style="display:none">🎤</div>
+  </div>
+  <div class="wait-name" id="wait-name">—</div>
+  <div class="wait-msg">You're in · Waiting for host</div>
+  <div class="wait-dots"><span>●</span><span>●</span><span>●</span></div>
+  <div class="instructions-card">
+    <div class="ic-title">How to play</div>
+    <div class="ic-row">
+      <div class="ic-icon">⏱</div>
+      <div class="ic-text"><strong>Answer fast.</strong> You start with 1000 points and lose 50 pts per second. Max 1000 per question.</div>
+    </div>
+    <div class="ic-row">
+      <div class="ic-icon">🔥</div>
+      <div class="ic-text"><strong>Build a streak.</strong> Answer 3+ in a row correctly and you'll see 🔥 next to your name.</div>
+    </div>
+    <div class="ic-row">
+      <div class="ic-icon">🔔</div>
+      <div class="ic-text"><strong>Buzzer round (Q5).</strong> First player to answer CORRECTLY wins 1000 pts. Everyone else gets nothing.</div>
+    </div>
+    <div class="ic-row">
+      <div class="ic-icon">⚡</div>
+      <div class="ic-text"><strong>All-In final (Q10).</strong> Go ALL IN: correct = +2000 pts, wrong = -1000 pts. Or play it safe for normal scoring.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ALL-IN DECISION -->
+<div class="screen" id="allin-screen">
+  <div class="ai-title">⚡ ALL IN ⚡</div>
+  <div class="ai-sub">Última pregunta. Double-or-nothing.<br>Nobody sees what you decide.</div>
+  <div class="ai-stakes">Right + ALL IN → +2000 pts &nbsp;|&nbsp; Wrong + ALL IN → −1000 pts</div>
+  <div class="ai-btns">
+    <button class="ai-btn yes" onclick="decideAllin(true)">I'M ALL IN 🎰</button>
+    <button class="ai-btn no"  onclick="decideAllin(false)">PLAY SAFE</button>
+  </div>
+  <div class="ai-decided" id="ai-decided"></div>
+</div>
+
+<!-- BUZZER SCREEN — player waits here; host shows the question, then options -->
+<div class="screen" id="buzzer-screen">
+  <div class="bz-title">🔔 BUZZER</div>
+  <div class="bz-sub">First correct answer wins everything</div>
+  <div class="bz-note">Wait for the host to show the options, then answer fast.</div>
+  <div class="bz-waiting show" id="bz-waiting">Waiting for host to show options...</div>
+  <div class="bz-lost" id="bz-lost">Someone answered correctly first.</div>
+</div>
+
+<!-- QUESTION SCREEN -->
+<div class="screen" id="q-screen">
+  <div class="q-bg-overlay" id="q-bg-overlay"></div>
+  <div class="q-top">
+    <div class="q-num-lbl" id="q-num-lbl">Q1/10</div>
+    <div class="q-mode-badge" id="q-mode-badge"></div>
+    <div class="timer-pill">
+      <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+      <div class="timer-num" id="timer-num">20</div>
+    </div>
+  </div>
+  <div class="q-sec-lbl" id="q-sec-lbl">—</div>
+  <div class="q-text-area" id="q-text">Loading...</div>
+  <div class="q-image-inline" id="q-image-inline">
+    <img id="q-inline-img" src="" alt="Question image">
+  </div>
+  <div class="answers-list" id="answers-list"></div>
+  <div class="miss-wrap" id="miss-wrap">
+    <div class="miss-ttl">Still answering</div>
+    <div class="miss-chips" id="miss-chips"></div>
+  </div>
+</div>
+
+<!-- WAIT REVEAL -->
+<div class="screen" id="wait-reveal">
+  <div class="wr-icon">⏳</div>
+  <div class="wr-msg" id="wr-msg">Locked in!</div>
+  <div class="wr-sub">Waiting for host to reveal...</div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div class="screen" id="result-screen">
+  <div class="res-card">
+    <div class="res-header">
+      <div class="res-icon" id="res-icon">✅</div>
+      <div class="res-verdict">
+        <div class="res-lbl" id="res-lbl">Correct</div>
+        <div class="res-pts" id="res-pts">+0</div>
+        <div class="res-total-txt">Total: <span id="res-total">0</span> pts</div>
+      </div>
+    </div>
+    <div class="res-answer-row">
+      <div class="res-answer-lbl">Correct answer</div>
+      <div class="res-answer" id="res-answer">—</div>
+    </div>
+  </div>
+  <div class="res-fact-box">
+    <div class="res-fact" id="res-fact">—</div>
+  </div>
+  <div class="res-streak" id="res-streak"></div>
+  <div class="res-rank-title">Nearby ranking</div>
+  <div id="nearby-rank"></div>
+</div>
+
+<!-- FINAL SCREEN -->
+<div class="screen" id="final-screen">
+  <div class="red-screen" id="red-screen"></div>
+  <div class="final-title">Game Over</div>
+  <div class="final-av" id="final-av">
+    <img id="final-av-img" src="" alt=""
+         onerror="this.style.display='none';document.getElementById('final-av-fb').style.display='flex'">
+    <div class="av-fallback-lg" id="final-av-fb" style="display:none">🎤</div>
+  </div>
+  <div class="final-rank-label" id="final-rank-label">Your Position</div>
+  <div class="final-rank" id="final-rank">#—</div>
+  <div class="final-name" id="final-name">—</div>
+  <div class="final-score" id="final-score">0 pts</div>
+  <div class="rank-wait" id="rank-wait">Waiting for final reveal...</div>
+  <div class="final-list" id="final-list"></div>
+</div>
+
+<!-- KICKED SCREEN -->
+<div class="screen" id="kicked-screen">
+  <div class="kick-icon">🚫</div>
+  <div class="kick-title">Removed</div>
+  <div class="kick-msg">The host removed you.<br>You can rejoin with your code and name.</div>
+  <button class="kick-retry" onclick="resetToJoin()">BACK TO JOIN ←</button>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   TRAP QUIZ — PLAYER SCRIPT
+   ═══════════════════════════════════════════════════════════ */
+
+/* ═══ FIREBASE CONFIG ═══ */
+const FB = {
+  apiKey:"AIzaSyAK2UNfOHUyl7YrYE0hI9slRZdlnpPQ96s",
+  authDomain:"trap-quiz-67.firebaseapp.com",
+  projectId:"trap-quiz-67",
+  storageBucket:"trap-quiz-67.firebasestorage.app",
+  messagingSenderId:"1039849877202",
+  appId:"1:1039849877202:web:19d12db33ae928ab3a870b",
+  databaseURL:"https://trap-quiz-67-default-rtdb.firebaseio.com"
+};
+
+/* ═══ STATE ═══ */
+let db, gameRef, playerId, playerName;
+let playerAvatarUrl = '', playerAvatarKey = 'rocky';
+let roomId;
+let myScore = 0, myCorrect = 0, myBestStreak = 0;
+let cQIdx = -1, answered = false, myChoice = null, timerInt = null;
+let allinDecision = null, allinDecisionLocked = false;
+let currentMode = 'normal';
+let QUESTIONS = [], avatarMap = {};
+let revealShown = false;
+let kickListenerAttached = false;
+
+/* ═══ AUDIO ═══ */
+const ACtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function getAC() {
+  if (!audioCtx) audioCtx = new ACtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+/* ═══ INIT ═══ */
+window.addEventListener('DOMContentLoaded', () => {
+  const p = new URLSearchParams(window.location.search);
+  const r = p.get('room');
+  if (r) document.getElementById('inp-room').value = r.toUpperCase();
+  ['inp-room','inp-name'].forEach(id =>
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key==='Enter') joinGame(); }));
+  playerAvatarKey = 'rocky';
+  playerAvatarUrl = '';
+  /* Rocky selected by default */
+  document.querySelectorAll('.av-opt').forEach(a => a.classList.remove('sel'));
+  document.querySelector('[data-key="rocky"]').classList.add('sel');
+});
+
+/* ═══ AVATAR SELECT ═══ */
+function selectAv(el) {
+  document.querySelectorAll('.av-opt').forEach(a => a.classList.remove('sel'));
+  el.classList.add('sel');
+  playerAvatarKey = el.dataset.key;
+  playerAvatarUrl = avatarMap[playerAvatarKey] || '';
+}
+
+function applyAvatarImages(avMap) {
+  ['rocky','keef','carti'].forEach(k => {
+    const img = document.getElementById('av-img-' + k);
+    const fb  = document.getElementById('av-fb-' + k);
+    if (img && avMap && avMap[k]) {
+      img.src = avMap[k];
+      img.style.display = '';
+      if (fb) fb.style.display = 'none';
+    }
+  });
+  avatarMap = avMap || {};
+  playerAvatarUrl = avatarMap[playerAvatarKey] || '';
+}
+
+/* ═══ JOIN ═══ */
+function joinGame() {
+  getAC(); /* unlock audio on user gesture */
+  roomId = document.getElementById('inp-room').value.trim().toUpperCase();
+  playerName = document.getElementById('inp-name').value.trim();
+  const err = document.getElementById('j-err');
+  if (!roomId || !playerName) { err.textContent = 'Fill in both fields!'; return; }
+  err.textContent = '';
+
+  let app;
+  try { app = firebase.initializeApp(FB, 'p-' + Date.now()); }
+  catch(e) { try { app = firebase.app(); } catch(e2) { app = firebase.initializeApp(FB); } }
+  db = firebase.database(app);
+  gameRef = db.ref('rooms/' + roomId);
+
+  /* First check room exists */
+  gameRef.child('status').once('value').then(snap => {
+    if (!snap.val()) { err.textContent = 'Room not found!'; return; }
+
+    /* Load avatars */
+    return gameRef.child('avatars').once('value').then(snap2 => {
+      if (snap2.val()) applyAvatarImages(snap2.val());
+
+      playerId = 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+      playerAvatarUrl = avatarMap[playerAvatarKey] || '';
+
+      return gameRef.child('players/' + playerId).set({
+        name: playerName, score: 0,
+        avatarUrl: playerAvatarUrl,
+        avatarKey: playerAvatarKey,
+        streak: 0, joined: Date.now()
+      });
+    });
+  }).then(() => {
+    /* Update avatar preview in lobby-wait */
+    const wai = document.getElementById('wait-av-img');
+    const wafb = document.getElementById('wait-av-fallback');
+    if (playerAvatarUrl) { wai.src = playerAvatarUrl; wai.style.display=''; wafb.style.display='none'; }
+    else { wai.style.display='none'; wafb.style.display='flex'; }
+    const fai = document.getElementById('final-av-img');
+    const fafb = document.getElementById('final-av-fb');
+    if (playerAvatarUrl) { fai.src = playerAvatarUrl; fai.style.display=''; fafb.style.display='none'; }
+    else { fai.style.display='none'; fafb.style.display='flex'; }
+    document.getElementById('wait-name').textContent = playerName;
+
+    showScreen('lobby-wait');
+    listenGame();
+    listenKick();
+  }).catch(e => { document.getElementById('j-err').textContent = 'Could not join: ' + e.message; });
+}
+
+/* ═══ RESET TO JOIN (after kick) ═══ */
+function resetToJoin() {
+  if (gameRef) {
+    gameRef.off();
+    if (playerId) {
+      gameRef.child('kicked/' + playerId).off();
+      /* Remove player data */
+      gameRef.child('players/' + playerId).remove().catch(()=>{});
+      gameRef.child('answers/' + playerId).remove().catch(()=>{});
+    }
+  }
+  /* Reset all state */
+  cQIdx = -1; answered = false; myChoice = null;
+  allinDecision = null; allinDecisionLocked = false;
+  myScore = 0; myCorrect = 0; myBestStreak = 0;
+  currentMode = 'normal'; revealShown = false;
+  kickListenerAttached = false;
+  clearInterval(timerInt);
+  document.getElementById('j-err').textContent = '';
+  showScreen('join-screen');
+}
+
+/* ═══ KICK LISTENER ═══ */
+function listenKick() {
+  if (kickListenerAttached) return;
+  kickListenerAttached = true;
+  gameRef.child('kicked/' + playerId).on('value', snap => {
+    const v = snap.val();
+    if (v && v.kicked === true) {
+      /* Stop all other listeners immediately */
+      gameRef.off();
+      clearInterval(timerInt);
+      showScreen('kicked-screen');
+    }
+  });
+}
+
+/* ═══ MAIN GAME LISTENER ═══ */
+function listenGame() {
+  gameRef.child('questions').once('value').then(snap => {
+    if (snap.val()) QUESTIONS = snap.val();
+  });
+
+  gameRef.on('value', snap => {
+    const data = snap.val();
+    if (!data) return;
+    const st = data.status;
+
+    /* If we got kicked, stop */
+    if (st === undefined) return;
+
+    if (st === 'lobby') { showScreen('lobby-wait'); return; }
+
+    const qi = data.currentQ;
+    const mode = data.mode || 'normal';
+
+    /* Detect new question */
+    const newQ = (qi !== cQIdx);
+    if (newQ) {
+      cQIdx = qi;
+      answered = false; myChoice = null;
+      allinDecision = null; allinDecisionLocked = false;
+      currentMode = mode; revealShown = false;
+    }
+
+    if (st === 'question_thinking') {
+      handleThinking(data, newQ, mode);
+    }
+    else if (st === 'question') {
+      if (!data.optionsVisible) return;
+      handleOptions(data, mode);
+    }
+    else if (st === 'revealed') {
+      clearInterval(timerInt);
+      if (!revealShown) { revealShown = true; showReveal(data); }
+    }
+    else if (st === 'results_pending') {
+      showFinalPending(data);
+    }
+    else if (st === 'results_losers') {
+      showFinalLosers(data);
+    }
+    else if (st === 'results_3rd') {
+      showFinalReveal(data, 3);
+    }
+    else if (st === 'results_2nd') {
+      showFinalReveal(data, 2);
+    }
+    else if (st === 'results') {
+      showFinalComplete(data);
+    }
+
+    /* Buzzer: if winner is set and it's not us, update buzzer screen */
+    if (mode === 'buzzer' && data.buzzerWinner && data.buzzerWinner !== playerId) {
+      const bz = document.getElementById('bz-lost');
+      if (bz) bz.classList.add('show');
+      const bw = document.getElementById('bz-waiting');
+      if (bw) bw.classList.remove('show');
+    }
+  });
+}
+
+/* ═══ THINKING PHASE ═══ */
+function handleThinking(data, isNew, mode) {
+  if (!isNew) return;
+
+  if (mode === 'allin') {
+    const sp = document.getElementById('allin-splash');
+    sp.classList.add('show'); playAllinTone();
+    setTimeout(() => { sp.classList.remove('show'); showAllinScreen(); }, 2800);
+  }
+  else if (mode === 'buzzer') {
+    const sp = document.getElementById('buzzer-splash');
+    sp.classList.add('show'); playBuzzerAnnounce();
+    setTimeout(() => { sp.classList.remove('show'); showBuzzerScreen(data); }, 2200);
+  }
+  else {
+    showThinkingQuestion(data);
+  }
+}
+
+function showThinkingQuestion(data) {
+  const q = QUESTIONS[cQIdx]; if (!q) return;
+  showScreen('q-screen');
+  applyQBg(data.background);
+  applyQImage(data.image);
+  document.getElementById('q-num-lbl').textContent = `Q${cQIdx+1}/${QUESTIONS.length}`;
+  document.getElementById('q-sec-lbl').textContent = q.section || '';
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('answers-list').innerHTML =
+    '<div style="padding:.5rem 0;font-size:.6rem;letter-spacing:.3em;color:var(--dim);text-transform:uppercase;">Waiting for host...</div>';
+  document.getElementById('miss-wrap').style.display = 'none';
+  clearInterval(timerInt);
+  const bar = document.getElementById('timer-bar');
+  bar.style.transition = 'none'; bar.style.width = '100%'; bar.style.background = 'var(--gold)';
+  document.getElementById('timer-num').textContent = '—';
+  const badge = document.getElementById('q-mode-badge'); badge.className = 'q-mode-badge';
+}
+
+/* ═══ ALL-IN SCREEN ═══ */
+function showAllinScreen() {
+  showScreen('allin-screen');
+  document.getElementById('ai-decided').textContent = '';
+  document.querySelectorAll('.ai-btn').forEach(b => b.disabled = false);
+}
+
+function decideAllin(go) {
+  if (allinDecisionLocked) return;
+  allinDecision = go;
+  allinDecisionLocked = true;
+  document.getElementById('ai-decided').textContent = go
+    ? '🎰 All in. No turning back.' : '✅ Playing it safe.';
+  document.querySelectorAll('.ai-btn').forEach(b => b.disabled = true);
+  /* Send decision to Firebase so host can use it for scoring */
+  gameRef.child('allinDecisions/' + playerId).set(go);
+}
+
+/* ═══ BUZZER SCREEN ═══ */
+function showBuzzerScreen(data) {
+  showScreen('buzzer-screen');
+  document.getElementById('bz-waiting').classList.add('show');
+  document.getElementById('bz-lost').classList.remove('show');
+}
+
+/* ═══ OPTIONS PHASE ═══ */
+function handleOptions(data, mode) {
+  /* If we're on the buzzer screen, switch to q-screen now that options are visible */
+  if (answered) {
+    if (data.answers) updateMissing(data.answers, data.scores || {});
+    return;
+  }
+
+  /* All-in: if not decided yet, default to safe */
+  if (mode === 'allin' && !allinDecisionLocked) {
+    allinDecision = false; allinDecisionLocked = true;
+    gameRef.child('allinDecisions/' + playerId).set(false);
+  }
+
+  const q = QUESTIONS[cQIdx]; if (!q) return;
+  showScreen('q-screen');
+  applyQBg(data.background);
+  applyQImage(data.image);
+  document.getElementById('q-num-lbl').textContent = `Q${cQIdx+1}/${QUESTIONS.length}`;
+  document.getElementById('q-sec-lbl').textContent = q.section || '';
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('miss-wrap').style.display = 'block';
+
+  const badge = document.getElementById('q-mode-badge');
+  badge.className = 'q-mode-badge';
+  if (mode === 'allin') { badge.classList.add('allin'); badge.textContent = '⚡ ALL IN'; }
+  else if (mode === 'buzzer') { badge.classList.add('buzzer'); badge.textContent = '🔔 BUZZER'; }
+
+  const letters = ['A','B','C','D'];
+  document.getElementById('answers-list').innerHTML = q.options.map((opt,i) =>
+    `<button class="ans-btn" id="ab-${i}" onclick="selectAns(${i},${cQIdx})">
+      <span class="ans-ltr">${letters[i]}</span>${escH(opt)}
+    </button>`).join('');
+
+  if (data.answers) updateMissing(data.answers, data.scores || {});
+  startTimerBar(20, data.questionStart);
+}
+
+function applyQBg(bg) {
+  const s = document.getElementById('q-screen');
+  const ov = document.getElementById('q-bg-overlay');
+  if (bg) {
+    s.style.backgroundImage = `url('${bg}')`;
+    s.style.backgroundColor = '#000';
+    ov.style.display = 'block';
+  } else {
+    s.style.backgroundImage = '';
+    s.style.backgroundColor = '';
+    ov.style.display = 'none';
+  }
+}
+
+function applyQImage(img) {
+  const wrap = document.getElementById('q-image-inline');
+  if (img) {
+    document.getElementById('q-inline-img').src = img;
+    wrap.classList.add('show');
+  } else {
+    wrap.classList.remove('show');
+  }
+}
+
+function updateMissing(answers, scores) {
+  const chips = document.getElementById('miss-chips');
+  const scoreKeys = Object.keys(scores || {});
+  if (scoreKeys.length > 0) {
+    chips.innerHTML = scoreKeys.map(pid => {
+      const p = scores[pid]; const done = !!answers[pid];
+      return `<div class="m-ch ${done?'done':''}">${escH(p.name)}</div>`;
+    }).join('');
+  } else {
+    chips.innerHTML = `<div class="m-ch">${Object.keys(answers||{}).length} responded</div>`;
+  }
+}
+
+/* ═══ TIMER BAR + NUMBER ═══ */
+function startTimerBar(sec, qStart) {
+  clearInterval(timerInt);
+  const bar = document.getElementById('timer-bar');
+  const numEl = document.getElementById('timer-num');
+  let elapsed = qStart ? Math.min(sec, Math.max(0, (Date.now()-qStart)/1000)) : 0;
+  let t = Math.ceil(sec - elapsed);
+  const pct = (t / sec) * 100;
+
+  bar.style.transition = 'none';
+  bar.style.width = pct + '%';
+  bar.style.background = t <= 5 ? 'var(--red)' : 'var(--gold)';
+  numEl.textContent = t;
+  numEl.style.color = t <= 5 ? 'var(--red)' : 'var(--gold)';
+  setTimeout(() => {
+    bar.style.transition = `width ${t}s linear`;
+    bar.style.width = '0%';
+  }, 60);
+
+  timerInt = setInterval(() => {
+    t--;
+    if (t < 0) { clearInterval(timerInt); return; }
+    numEl.textContent = t;
+    if (t <= 5) {
+      bar.style.background = 'var(--red)';
+      numEl.style.color = 'var(--red)';
+    }
+  }, 1000);
+}
+
+/* ═══ SELECT ANSWER ═══ */
+function selectAns(choice, qi) {
+  if (answered || qi !== cQIdx) return;
+  answered = true; myChoice = choice;
+  document.querySelectorAll('.ans-btn').forEach((b,i) => {
+    b.disabled = true;
+    if (i === choice) b.classList.add('selected');
+  });
+  clearInterval(timerInt);
+  gameRef.child('answers/' + playerId).set({
+    choice,
+    time: Date.now(),
+    name: playerName,
+    allin: (currentMode === 'allin') ? (allinDecision || false) : false
+  });
+  playSelectSnd();
+  if (navigator.vibrate) navigator.vibrate(40);
+  showScreen('wait-reveal');
+  document.getElementById('wr-msg').textContent = 'Locked in!';
+}
+
+/* ═══ REVEAL ═══ */
+function showReveal(data) {
+  const q = QUESTIONS[data.currentQ]; if (!q) return;
+  const correct = data.correctAnswer !== undefined ? data.correctAnswer : q.correct;
+  const isCorrect = myChoice === correct;
+  const mode = data.mode || 'normal';
+
+  /* For buzzer: only winner gets credit */
+  const isBuzzerWinner = (mode === 'buzzer') && (data.buzzerWinner === playerId);
+  const buzzedAndCorrect = (mode === 'buzzer') ? isBuzzerWinner : isCorrect;
+
+  /* Get score from server */
+  const myFb = data.scores ? Object.values(data.scores).find(s => s.name === playerName) : null;
+  const newScore = myFb ? myFb.score : myScore;
+  const pts = newScore - myScore;
+  myScore = newScore;
+
+  if (buzzedAndCorrect) myCorrect++;
+  const streak = myFb?.streak || 0;
+  if (streak > myBestStreak) myBestStreak = streak;
+
+  triggerFlash(isCorrect ? 'rgba(0,255,136,.28)' : 'rgba(255,45,85,.22)');
+  if (navigator.vibrate) navigator.vibrate(isCorrect ? [30,40,80] : [80,30,80]);
+  showBadge(isCorrect);
+  if (isCorrect) playCorrectSnd(); else playWrongSnd();
+
+  document.getElementById('res-icon').textContent = isCorrect ? '✅' : '❌';
+  document.getElementById('res-lbl').textContent = isCorrect ? 'CORRECT! 🔥' : 'Wrong answer';
+  document.getElementById('res-lbl').style.color = isCorrect ? 'var(--green)' : 'var(--red)';
+  document.getElementById('res-answer').textContent = q.options[correct];
+  document.getElementById('res-pts').textContent = pts > 0 ? `+${pts}` : (pts < 0 ? `${pts}` : '+0');
+  document.getElementById('res-pts').style.color = pts > 0 ? 'var(--green)' : (pts < 0 ? 'var(--red)' : 'var(--dim)');
+  document.getElementById('res-total').textContent = myScore;
+  document.getElementById('res-fact').textContent = data.fact || q.fact || '';
+  document.getElementById('res-streak').textContent = streak >= 3 ? `🔥 ${streak} in a row` : '';
+
+  /* Nearby ranking */
+  const scores = data.scores || {};
+  const sorted = Object.values(scores).sort((a,b) => (b.score||0)-(a.score||0));
+  const myPos = sorted.findIndex(p => p.name === playerName);
+  const lo = Math.max(0, myPos-2), hi = Math.min(sorted.length-1, myPos+2);
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('nearby-rank').innerHTML = sorted.slice(lo, hi+1).map((p, ri) => {
+    const ai = lo + ri;
+    const isMe = p.name === playerName;
+    const av = p.avatarUrl
+      ? `<img class="nb-av" src="${escH(p.avatarUrl)}" width="18" height="18" style="border-radius:50%;object-fit:cover;">`
+      : `<div class="nb-av">🎤</div>`;
+    return `<div class="nearby-row ${isMe?'me':''}">
+      <div class="nb-pos">${medals[ai]||ai+1}</div>${av}
+      <div class="nb-name">${escH(p.name)}</div>
+    </div>`;
+  }).join('');
+
+  setTimeout(() => showScreen('result-screen'), 680);
+}
+
+function showBadge(ok) {
+  const ov = document.getElementById('badge-ov');
+  const bt = document.getElementById('badge-txt');
+  bt.className = 'badge-txt ' + (ok ? 'good' : 'bad');
+  bt.textContent = ok ? '✓ CORRECT' : '✗ WRONG';
+  ov.className = 'badge-ov show';
+  setTimeout(() => { ov.className = 'badge-ov hide'; setTimeout(() => ov.className = 'badge-ov', 400); }, 680);
+}
+
+/* ═══ FINAL — STEP BY STEP ═══ */
+/* Step 0: results_pending — show just "Game over" + your score, wait */
+function showFinalPending(data) {
+  const scores = data.scores || {};
+  const sorted = Object.values(scores).sort((a,b)=>(b.score||0)-(a.score||0));
+  const myPos = sorted.findIndex(p => p.name === playerName);
+  const myRank = myPos + 1;
+
+  document.getElementById('final-name').textContent = playerName;
+  document.getElementById('final-score').textContent = `${myScore} pts`;
+  document.getElementById('final-rank').textContent = `#${myRank}`;
+  document.getElementById('final-rank').className = 'final-rank default-color';
+  document.getElementById('final-list').innerHTML = '';
+  document.getElementById('rank-wait').style.display = 'block';
+  document.getElementById('rank-wait').textContent = 'Waiting for final reveal...';
+  document.getElementById('red-screen').classList.remove('show');
+  showScreen('final-screen');
+}
+
+/* Step 1: results_losers — bottom 3 get red screen */
+function showFinalLosers(data) {
+  const scores = data.scores || {};
+  const sorted = Object.values(scores).sort((a,b)=>(b.score||0)-(a.score||0));
+  const bottom3 = data.bottom3 ? JSON.parse(data.bottom3) : [];
+  const myPos = sorted.findIndex(p => p.name === playerName);
+  const myRank = myPos + 1;
+  const total = sorted.length;
+
+  document.getElementById('final-name').textContent = playerName;
+  document.getElementById('final-score').textContent = `${myScore} pts`;
+  document.getElementById('final-rank').textContent = `#${myRank}`;
+  document.getElementById('final-rank').className = 'final-rank default-color';
+  document.getElementById('rank-wait').textContent = 'Waiting for podium reveal...';
+
+  const isBottom3 = bottom3.includes(playerName);
+  if (isBottom3) {
+    document.getElementById('red-screen').classList.add('show');
+    /* Show their position */
+    document.getElementById('final-list').innerHTML = sorted.slice(total-3, total).map((p,i) => {
+      const ai = total - 3 + i;
+      const isMe = p.name === playerName;
+      return `<div class="fl-row ${isMe?'me':''}">
+        <div class="fl-pos">${ai+1}</div>
+        <div class="fl-av">🎤</div>
+        <div class="fl-name">${escH(p.name)}</div>
+        <div class="fl-sc">${p.score||0}</div>
+      </div>`;
+    }).join('');
+  } else {
+    /* Others see a ? for top spots */
+    document.getElementById('red-screen').classList.remove('show');
+    document.getElementById('final-list').innerHTML = '<div style="font-size:.6rem;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-top:.5rem;">Top 3 being revealed...</div>';
+  }
+
+  showScreen('final-screen');
+}
+
+/* Step 2/3: 3rd or 2nd revealed */
+function showFinalReveal(data, rank) {
+  const scores = data.scores || {};
+  const sorted = Object.values(scores).sort((a,b)=>(b.score||0)-(a.score||0));
+  const myPos = sorted.findIndex(p => p.name === playerName);
+  const myRank = myPos + 1;
+  const total = sorted.length;
+
+  document.getElementById('final-name').textContent = playerName;
+  document.getElementById('final-score').textContent = `${myScore} pts`;
+  document.getElementById('final-rank').textContent = `#${myRank}`;
+
+  /* Show non-top-3 positions */
+  if (myRank > 3) {
+    document.getElementById('red-screen').classList.remove('show');
+    document.getElementById('final-rank').className = 'final-rank default-color';
+    document.getElementById('final-list').innerHTML = sorted.slice(3).map((p,i) => {
+      const ai = 3 + i;
+      const isMe = p.name === playerName;
+      return `<div class="fl-row ${isMe?'me':''}">
+        <div class="fl-pos">${ai+1}</div>
+        <div class="fl-av">🎤</div>
+        <div class="fl-name">${escH(p.name)}</div>
+        <div class="fl-sc">${p.score||0}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('rank-wait').textContent = 'Top 3 being revealed on screen...';
+  }
+
+  /* If I am the revealed rank */
+  if (myRank === rank) {
+    document.getElementById('red-screen').classList.remove('show');
+    if (rank === 3) {
+      document.getElementById('final-rank').className = 'final-rank bronze-glow';
+      document.getElementById('final-rank-label').textContent = '🥉 3rd Place';
+    } else if (rank === 2) {
+      document.getElementById('final-rank').className = 'final-rank silver-glow';
+      document.getElementById('final-rank-label').textContent = '🥈 2nd Place';
+    }
+    document.getElementById('rank-wait').style.display = 'none';
+    playFanfare();
+  }
+
+  showScreen('final-screen');
+}
+
+/* Step 4: winner revealed */
+function showFinalComplete(data) {
+  const scores = data.scores || {};
+  const sorted = Object.values(scores).sort((a,b)=>(b.score||0)-(a.score||0));
+  const myPos = sorted.findIndex(p => p.name === playerName);
+  const myRank = myPos + 1;
+
+  document.getElementById('final-name').textContent = playerName;
+  document.getElementById('final-score').textContent = `${myScore} pts`;
+  document.getElementById('final-rank').textContent = `#${myRank}`;
+  document.getElementById('rank-wait').style.display = 'none';
+  document.getElementById('red-screen').classList.remove('show');
+
+  if (myRank === 1) {
+    document.getElementById('final-rank').className = 'final-rank gold-glow';
+    document.getElementById('final-rank-label').textContent = '🏆 Winner!';
+    document.getElementById('win-flash').classList.add('show');
+    playWinSnd();
+  } else if (myRank === 2) {
+    document.getElementById('final-rank').className = 'final-rank silver-glow';
+    document.getElementById('final-rank-label').textContent = '🥈 2nd Place';
+  } else if (myRank === 3) {
+    document.getElementById('final-rank').className = 'final-rank bronze-glow';
+    document.getElementById('final-rank-label').textContent = '🥉 3rd Place';
+  } else {
+    document.getElementById('final-rank').className = 'final-rank default-color';
+    document.getElementById('final-rank-label').textContent = 'Your Position';
+  }
+
+  /* Show full ranking */
+  document.getElementById('final-list').innerHTML = sorted.map((p,i) => {
+    const isMe = p.name === playerName;
+    const medals = ['🥇','🥈','🥉'];
+    return `<div class="fl-row ${isMe?'me':''}">
+      <div class="fl-pos">${medals[i]||i+1}</div>
+      <div class="fl-av">🎤</div>
+      <div class="fl-name">${escH(p.name)}</div>
+      <div class="fl-sc">${p.score||0}</div>
+    </div>`;
+  }).join('');
+
+  showScreen('final-screen');
+}
+
+/* ═══ UTILS ═══ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function triggerFlash(c) {
+  const f = document.getElementById('flash');
+  f.style.background = c; f.classList.add('on');
+  setTimeout(() => f.classList.remove('on'), 200);
+}
+function escH(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ═══ AUDIO — all synth, no files needed ═══ */
+function playSelectSnd() {
+  const ac = getAC(), o = ac.createOscillator(), g = ac.createGain();
+  o.connect(g); g.connect(ac.destination); o.type = 'sine'; o.frequency.value = 520;
+  g.gain.setValueAtTime(.16, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime+.12);
+  o.start(); o.stop(ac.currentTime+.12);
+}
+
+function playCorrectSnd() {
+  const ac = getAC();
+  [523,659,784,1047].forEach((f,i) => {
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);o.type='triangle';o.frequency.value=f;
+    const d=i*.07;
+    g.gain.setValueAtTime(.26,ac.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d+.38);
+    o.start(ac.currentTime+d);o.stop(ac.currentTime+d+.42);
+  });
+  const k=ac.createOscillator(),kg=ac.createGain();
+  k.connect(kg);kg.connect(ac.destination);k.type='sine';
+  k.frequency.setValueAtTime(180,ac.currentTime);k.frequency.exponentialRampToValueAtTime(40,ac.currentTime+.12);
+  kg.gain.setValueAtTime(.6,ac.currentTime);kg.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.15);
+  k.start();k.stop(ac.currentTime+.15);
+}
+
+function playWrongSnd() {
+  /* Grave, heavy, distorted — much lower than before */
+  const ac = getAC();
+  const dist = ac.createWaveShaper();
+  const curve = new Float32Array(512);
+  for (let i = 0; i < 512; i++) {
+    const x = (i * 2 / 512) - 1;
+    curve[i] = Math.tanh(x * 8) * 0.85;
+  }
+  dist.curve = curve; dist.oversample = '4x';
+
+  const masterGain = ac.createGain();
+  masterGain.connect(ac.destination);
+  dist.connect(masterGain);
+  masterGain.gain.setValueAtTime(.85, ac.currentTime);
+  masterGain.gain.exponentialRampToValueAtTime(.001, ac.currentTime+1.2);
+
+  /* Sub-bass detuned sawtooths — very low frequencies */
+  [55, 58].forEach(f => {
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(dist);
+    o.type='sawtooth';o.frequency.value=f;
+    g.gain.setValueAtTime(.5,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+1.1);
+    o.start();o.stop(ac.currentTime+1.2);
+  });
+
+  /* Heavy sub thump */
+  const thump=ac.createOscillator(),tg=ac.createGain();
+  thump.connect(tg);tg.connect(ac.destination);thump.type='sine';
+  thump.frequency.setValueAtTime(80,ac.currentTime);thump.frequency.exponentialRampToValueAtTime(20,ac.currentTime+.15);
+  tg.gain.setValueAtTime(1.0,ac.currentTime);tg.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.18);
+  thump.start();thump.stop(ac.currentTime+.18);
+}
+
+function playAllinTone() {
+  const ac = getAC();
+  const k=ac.createOscillator(),kg=ac.createGain();
+  k.connect(kg);kg.connect(ac.destination);k.type='sine';
+  k.frequency.setValueAtTime(200,ac.currentTime);k.frequency.exponentialRampToValueAtTime(40,ac.currentTime+.15);
+  kg.gain.setValueAtTime(1.0,ac.currentTime);kg.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.2);
+  k.start();k.stop(ac.currentTime+.2);
+  const sw=ac.createOscillator(),sg=ac.createGain();
+  sw.connect(sg);sg.connect(ac.destination);sw.type='sawtooth';
+  sw.frequency.setValueAtTime(80,ac.currentTime+.1);sw.frequency.exponentialRampToValueAtTime(880,ac.currentTime+.9);
+  sg.gain.setValueAtTime(.16,ac.currentTime+.1);sg.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.95);
+  sw.start(ac.currentTime+.1);sw.stop(ac.currentTime+.95);
+  [440,554,659].forEach(f=>{
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(.2,ac.currentTime+.9);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+1.5);
+    o.start(ac.currentTime+.9);o.stop(ac.currentTime+1.55);
+  });
+}
+
+function playBuzzerAnnounce() {
+  const ac = getAC();
+  [440,660,880,1320].forEach((f,i)=>{
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);o.type='square';o.frequency.value=f;
+    const d=i*.06;
+    g.gain.setValueAtTime(.1,ac.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d+.1);
+    o.start(ac.currentTime+d);o.stop(ac.currentTime+d+.12);
+  });
+}
+
+function playWinSnd() {
+  const ac = getAC();
+  [523,659,784,1047,784,1047,1319].forEach((f,i)=>{
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);o.type='triangle';o.frequency.value=f;
+    const d=i*.1;
+    g.gain.setValueAtTime(.22,ac.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d+.55);
+    o.start(ac.currentTime+d);o.stop(ac.currentTime+d+.6);
+  });
+}
+
+function playFanfare() {
+  const ac = getAC();
+  [523,659,784].forEach((f,i)=>{
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);o.type='triangle';o.frequency.value=f;
+    const d=i*.1;
+    g.gain.setValueAtTime(.18,ac.currentTime+d);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d+.45);
+    o.start(ac.currentTime+d);o.stop(ac.currentTime+d+.5);
+  });
+}
+</script>
+</body>
+</html>
