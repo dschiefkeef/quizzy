@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>TRAP QUIZ</title>
+<title>QUIZ</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -273,11 +273,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div class="win-flash" id="win-flash"></div>
 <div class="badge-ov" id="badge-ov"><div class="badge-txt" id="badge-txt"></div></div>
 <div class="mode-splash" id="allin-splash">
-  <div class="ms-big allin">⚡ ALL IN ⚡</div>
-  <div class="ms-sub">Double or nothing · Your call</div>
+  <div class="ms-big allin">🎰 ALL IN 🎰</div>
+  <div class="ms-sub">Double or nothing · You decide</div>
 </div>
 <div class="mode-splash" id="buzzer-splash">
-  <div class="ms-big buzzer">🔔 BUZZER</div>
+  <div class="ms-big buzzer">🛎️ BUZZER 🛎️</div>
   <div class="ms-sub">First correct answer wins it all</div>
 </div>
 
@@ -285,12 +285,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
      CREDIT — edit "made by" text here
      Also edit in credshow.html (host file)
      ═══════════════════════════════════ -->
-<div class="credit">TRAP QUIZ · made by YUNG CODER</div>
+<div class="credit">QUIZZY made by Denis</div>
 
 <!-- JOIN -->
 <div class="screen active" id="join-screen">
-  <div class="join-logo">TRAP<br>QUIZ</div>
-  <div class="join-sub">A$AP · Keef · Carti</div>
+  <div class="join-logo">QUIZ</div>
+  <div class="join-sub">A$AP Rocky, Chief Keef & Playboi Carti</div>
   <div class="join-form">
     <input class="j-input" id="inp-room" type="text" placeholder="Room Code" maxlength="6"
            autocomplete="off" spellcheck="false" autocapitalize="characters">
@@ -298,19 +298,19 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div class="av-section-label">Choose your artist</div>
     <div class="av-row" id="av-row">
       <div class="av-opt sel" data-key="rocky" onclick="selectAv(this)">
-        <img id="av-img-rocky" src="" alt="A$AP Rocky"
+        <img id="asapprof.jpg" src="" alt="A$AP Rocky"
              onerror="this.style.display='none';document.getElementById('av-fb-rocky').style.display='flex'">
         <div class="av-fallback" id="av-fb-rocky">🎤</div>
         <div class="av-name">A$AP Rocky</div>
       </div>
       <div class="av-opt" data-key="keef" onclick="selectAv(this)">
-        <img id="av-img-keef" src="" alt="Chief Keef"
+        <img id="keefprof.jpg" src="" alt="Chief Keef"
              onerror="this.style.display='none';document.getElementById('av-fb-keef').style.display='flex'">
         <div class="av-fallback" id="av-fb-keef">🖤</div>
         <div class="av-name">Chief Keef</div>
       </div>
       <div class="av-opt" data-key="carti" onclick="selectAv(this)">
-        <img id="av-img-carti" src="" alt="Playboi Carti"
+        <img id="cartiprof.jpg" src="" alt="Playboi Carti"
              onerror="this.style.display='none';document.getElementById('av-fb-carti').style.display='flex'">
         <div class="av-fallback" id="av-fb-carti">⚡</div>
         <div class="av-name">Playboi Carti</div>
@@ -354,7 +354,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
 <!-- ALL-IN DECISION -->
 <div class="screen" id="allin-screen">
-  <div class="ai-title">⚡ ALL IN ⚡</div>
+  <div class="ai-title">🎰 ALL IN 🎰</div>
   <div class="ai-sub">Última pregunta. Double-or-nothing.<br>Nobody sees what you decide.</div>
   <div class="ai-stakes">Right + ALL IN → +2000 pts &nbsp;|&nbsp; Wrong + ALL IN → −1000 pts</div>
   <div class="ai-btns">
@@ -366,7 +366,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
 <!-- BUZZER SCREEN — player waits here; host shows the question, then options -->
 <div class="screen" id="buzzer-screen">
-  <div class="bz-title">🔔 BUZZER</div>
+  <div class="bz-title">🛎️ BUZZER 🛎️</div>
   <div class="bz-sub">First correct answer wins everything</div>
   <div class="bz-note">Wait for the host to show the options, then answer fast.</div>
   <div class="bz-waiting show" id="bz-waiting">Waiting for host to show options...</div>
