@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TRAP QUIZ — PLAYER</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap');
+:root {
+  --bg:#050505; --gold:#d4a843; --green:#00ff88; --red:#ff2d55; --white:#f0ece4; --dim:rgba(240,236,228,0.4);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--white);font-family:'Space Mono',monospace;overflow:hidden}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:9998}
+
+.screen{display:none;position:fixed;inset:0;overflow-y:auto;overflow-x:hidden}
+.screen.active{display:flex;flex-direction:column}
+
+/* CREDIT */
+.credit{position:fixed;bottom:.6rem;right:1rem;font-size:.44rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(255,255,255,.14);pointer-events:none;z-index:500}
+
+/* ── JOIN SCREEN ── */
+#join-screen{align-items:center;justify-content:center;min-height:100%;text-align:center;padding:2rem 1.5rem;background:radial-gradient(ellipse at 50% 0%,rgba(212,168,67,.13) 0%,transparent 60%)}
+.join-logo{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,12vw,7rem);line-height:.88;background:linear-gradient(135deg,var(--gold),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.5rem}
+.join-sub{font-size:clamp(.5rem,1.4vw,.7rem);letter-spacing:.4em;text-transform:uppercase;color:var(--dim);margin-bottom:2rem}
+.join-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);padding:2rem 1.5rem;width:100%;max-width:400px}
+.jlabel{font-size:.55rem;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:.5rem;text-align:left;display:block}
+.jinput{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:var(--white);font-family:'Space Mono',monospace;font-size:clamp(.9rem,3.5vw,1.2rem);letter-spacing:.12em;text-align:center;padding:.8rem 1rem;margin-bottom:1rem;outline:none;transition:border-color .2s;-webkit-appearance:none;border-radius:0}
+.jinput:focus{border-color:var(--gold)}
+.jinput.code{text-transform:uppercase;font-size:clamp(1rem,4vw,1.5rem);letter-spacing:.3em}
+
+/* Avatar picker */
+.avatar-section{margin-bottom:1.2rem;text-align:left}
+.avatar-label{font-size:.55rem;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:.6rem;display:block}
+.avatar-row{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+.av-opt{display:flex;flex-direction:column;align-items:center;gap:.4rem;cursor:pointer;padding:.4rem;border:2px solid transparent;transition:all .2s}
+.av-opt.sel{border-color:var(--gold)}
+.av-img{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.15)}
+.av-name{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.av-opt.sel .av-name{color:var(--gold)}
+
+.btn-join{background:var(--gold);color:var(--bg);border:none;font-family:'Bebas Neue',cursive;font-size:clamp(1.3rem,4vw,1.8rem);padding:.85rem 2rem;cursor:pointer;letter-spacing:.1em;width:100%;transition:all .2s;margin-top:.5rem}
+.btn-join:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── LOBBY (wait) ── */
+#wait-screen{align-items:center;justify-content:center;min-height:100%;text-align:center;padding:2rem 1.5rem;gap:1.5rem}
+.wait-av{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);margin:0 auto}
+.wait-av-emoji{font-size:3rem}
+.wait-name{font-family:'Bebas Neue',cursive;font-size:clamp(2rem,7vw,3.5rem)}
+.wait-code{font-size:.55rem;letter-spacing:.4em;text-transform:uppercase;color:var(--dim)}
+.wait-status{font-family:'Bebas Neue',cursive;font-size:clamp(.9rem,2.5vw,1.2rem);color:var(--green);animation:blink 1.2s ease infinite}
+.wait-instructions{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);padding:1.2rem 1.5rem;max-width:400px;width:100%;text-align:left}
+.inst-title{font-family:'Bebas Neue',cursive;font-size:1.1rem;color:var(--gold);margin-bottom:.75rem}
+.inst-row{font-size:.6rem;line-height:1.95;color:var(--dim)}
+.inst-row b{color:var(--white)}
+
+/* ── ALLIN DECISION ── */
+#allin-screen{align-items:center;justify-content:center;min-height:100%;text-align:center;padding:2rem 1.5rem;gap:1.2rem;background:radial-gradient(ellipse at 50% 50%,rgba(212,168,67,.12) 0%,transparent 70%)}
+.allin-title{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,12vw,7rem);line-height:.9;background:linear-gradient(135deg,var(--gold),var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.allin-sub{font-size:clamp(.6rem,1.5vw,.75rem);letter-spacing:.4em;text-transform:uppercase;color:var(--dim)}
+.allin-score{font-family:'Bebas Neue',cursive;font-size:clamp(2rem,6vw,3rem);color:var(--gold)}
+.allin-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn-allin{font-family:'Bebas Neue',cursive;font-size:clamp(1.1rem,4vw,1.5rem);padding:1rem 2rem;cursor:pointer;letter-spacing:.1em;border:none;transition:all .2s;min-width:160px}
+.btn-allin.yes{background:var(--gold);color:var(--bg)}
+.btn-allin.no{background:transparent;border:2px solid rgba(255,255,255,.25);color:var(--white)}
+.allin-decided{font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:var(--green);margin-top:.5rem}
+
+/* ── BUZZER WAIT ── */
+#buzzer-screen{align-items:center;justify-content:center;min-height:100%;text-align:center;padding:2rem}
+.buzz-title{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,12vw,7rem);line-height:.9;background:linear-gradient(135deg,var(--green),#00ccff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.buzz-sub{font-size:clamp(.6rem,1.5vw,.75rem);letter-spacing:.4em;text-transform:uppercase;color:var(--dim);margin-top:1rem}
+.buzz-wait{font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-top:2rem;animation:blink 1s ease infinite}
+
+/* ── QUESTION ── */
+#question-screen{min-height:100%;padding:1rem;gap:.75rem}
+.q-header{display:flex;align-items:center;gap:.65rem;flex-shrink:0;flex-wrap:wrap}
+.q-num{font-family:'Bebas Neue',cursive;font-size:clamp(.7rem,2vw,.9rem);letter-spacing:.2em;color:var(--dim);white-space:nowrap}
+.q-prog{flex:1;height:3px;background:rgba(255,255,255,.08);min-width:40px}
+.q-prog-fill{height:100%;background:var(--gold)}
+.q-mode-pill{display:none;font-family:'Bebas Neue',cursive;font-size:.72rem;padding:.2rem .7rem;letter-spacing:.12em;white-space:nowrap}
+.q-mode-pill.buzzer{display:inline-block;background:var(--green);color:#000}
+.q-mode-pill.allin{display:inline-block;background:linear-gradient(135deg,var(--gold),var(--red));color:#000}
+/* Timer bar */
+.q-timer-row{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.q-timer-bar-wrap{flex:1;height:5px;background:rgba(255,255,255,.08)}
+.q-timer-bar{height:100%;background:var(--gold);transition:width 1s linear,background .3s}
+.q-timer-num{font-family:'Bebas Neue',cursive;font-size:.9rem;color:var(--white);min-width:1.5rem;text-align:right}
+/* Section label */
+.q-section{font-size:.5rem;letter-spacing:.35em;text-transform:uppercase;color:var(--gold);flex-shrink:0}
+.q-text{font-family:'Bebas Neue',cursive;font-size:clamp(1.1rem,4.5vw,2rem);line-height:1.15;word-break:break-word;flex-shrink:0}
+/* Imagen */
+.q-img-wrap{flex-shrink:0;display:none;text-align:center}
+.q-img-wrap.show{display:block}
+.q-img-wrap img{max-width:100%;max-height:160px;object-fit:contain;border:2px solid rgba(255,255,255,.12)}
+/* Answers */
+.q-answers{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;flex-shrink:0}
+@media(max-width:380px){.q-answers{grid-template-columns:1fr}}
+.ans-btn{padding:.85rem 1rem;border:2px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:var(--white);font-family:'Bebas Neue',cursive;font-size:clamp(.85rem,2.5vw,1.15rem);letter-spacing:.04em;text-align:left;cursor:pointer;display:flex;align-items:center;gap:.6rem;transition:all .25s;word-break:break-word;line-height:1.2;-webkit-tap-highlight-color:transparent}
+.ans-btn:active{transform:scale(.97)}
+.ans-btn:disabled{cursor:not-allowed}
+.ans-letter{font-size:.8rem;opacity:.45;flex-shrink:0}
+.ans-btn.selected{background:rgba(212,168,67,.2);border-color:var(--gold);color:var(--gold)}
+.ans-btn.correct{background:rgba(0,255,136,.15);border-color:var(--green);color:var(--green)}
+.ans-btn.wrong{background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.3);opacity:.5}
+/* Score mini */
+.q-score-row{display:flex;align-items:center;gap:.5rem;flex-shrink:0;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.q-score-val{font-family:'Bebas Neue',cursive;font-size:1rem;color:var(--gold)}
+.q-streak{font-family:'Bebas Neue',cursive;font-size:.85rem;color:var(--green)}
+
+/* ── RESULT (after each question) ── */
+#result-screen{align-items:center;justify-content:center;min-height:100%;text-align:center;padding:2rem 1.5rem;gap:1rem}
+.res-icon{font-size:4rem}
+.res-msg{font-family:'Bebas Neue',cursive;font-size:clamp(1.8rem,7vw,3.5rem)}
+.res-pts{font-family:'Bebas Neue',cursive;font-size:clamp(1.2rem,4vw,2rem);color:var(--gold)}
+.res-wait{font-size:.55rem;letter-spacing:.35em;text-transform:uppercase;color:var(--dim);animation:blink 1.2s ease infinite;margin-top:1rem}
+.nearby-title{font-size:.5rem;letter-spacing:.35em;text-transform:uppercase;color:var(--dim);margin-top:1.5rem}
+.nearby-list{margin-top:.5rem;width:100%;max-width:320px}
+.nb-row{display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.7rem}
+.nb-row.me{color:var(--gold)}
+.nb-pos{font-family:'Bebas Neue',cursive;font-size:1.1rem;color:var(--dim);width:1.5rem;text-align:right;flex-shrink:0}
+.nb-name{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-score{font-family:'Bebas Neue',cursive;font-size:1rem;flex-shrink:0}
+
+/* ── FINAL SCREEN ── */
+#final-screen{align-items:center;justify-content:center;min-height:100%;text-align:center;padding:2rem 1.5rem;gap:1rem;background:radial-gradient(ellipse at 50% 100%,rgba(212,168,67,.1) 0%,transparent 60%)}
+.final-av{width:90px;height:90px;border-radius:50%;object-fit:cover;margin:0 auto;border:3px solid var(--gold)}
+.final-name{font-family:'Bebas Neue',cursive;font-size:clamp(2rem,7vw,3.5rem)}
+.final-rank{font-family:'Bebas Neue',cursive;font-size:clamp(1rem,3vw,1.5rem);color:var(--dim)}
+.final-rank.pos1{color:var(--gold)}
+.final-rank.pos2{color:var(--white)}
+.final-rank.pos3{color:var(--gold);opacity:.7}
+.final-score{font-family:'Bebas Neue',cursive;font-size:clamp(2.5rem,10vw,5rem);color:var(--gold);line-height:1}
+.final-wait{font-size:.55rem;letter-spacing:.35em;text-transform:uppercase;color:var(--dim);animation:blink 1.2s ease infinite}
+.final-ranking{margin-top:1.5rem;width:100%;max-width:340px}
+.fr-row{display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.7rem}
+.fr-row.me{color:var(--gold)}
+.fr-pos{font-family:'Bebas Neue',cursive;font-size:1.1rem;color:var(--dim);width:1.5rem;text-align:right;flex-shrink:0}
+.fr-name{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr-score{font-family:'Bebas Neue',cursive;font-size:1rem;flex-shrink:0}
+
+/* ── KICKED ── */
+#kicked-screen{align-items:center;justify-content:center;min-height:100%;text-align:center;padding:2rem}
+.kicked-title{font-family:'Bebas Neue',cursive;font-size:clamp(3rem,12vw,7rem);color:var(--red);line-height:.9}
+.kicked-msg{font-size:.65rem;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-top:1rem;line-height:2}
+.btn-back{background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--white);font-family:'Bebas Neue',cursive;font-size:1.3rem;padding:.75rem 2rem;cursor:pointer;letter-spacing:.1em;margin-top:1.5rem}
+
+/* MISC */
+.flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:9000;transition:opacity .05s}
+.flash.on{opacity:1}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes shimmer{from{opacity:.6;transform:scale(.98)}to{opacity:1;transform:scale(1.03)}}
+</style>
+</head>
+<body>
+
+<div class="flash" id="flash"></div>
+
+<!-- ✏️ CRÉDITO — cambia el texto aquí -->
+<div class="credit">TRAP QUIZ — by TU NOMBRE AQUÍ</div>
+
+<!-- ══════════════ JOIN SCREEN ══════════════ -->
+<div class="screen active" id="join-screen">
+  <div class="join-logo">TRAP<br>QUIZ</div>
+  <div class="join-sub">A$AP Rocky · Chief Keef · Playboi Carti</div>
+  <div class="join-box">
+    <label class="jlabel">Your name</label>
+    <input class="jinput" id="inp-name" type="text" placeholder="your name" maxlength="16" autocomplete="off" spellcheck="false">
+
+    <label class="jlabel">Room code</label>
+    <input class="jinput code" id="inp-code" type="text" placeholder="e.g. TRAP1" maxlength="8" autocomplete="off" spellcheck="false">
+
+    <div class="avatar-section">
+      <span class="avatar-label">Choose your artist</span>
+      <div class="avatar-row" id="avatar-row">
+        <!-- Se rellena con JS cuando se cargan los avatares -->
+        <div class="av-opt sel" data-key="rocky">
+          <div class="av-img" style="background:#222;display:flex;align-items:center;justify-content:center;font-size:1.5rem">🎤</div>
+          <div class="av-name">ROCKY</div>
+        </div>
+        <div class="av-opt" data-key="keef">
+          <div class="av-img" style="background:#222;display:flex;align-items:center;justify-content:center;font-size:1.5rem">🎤</div>
+          <div class="av-name">KEEF</div>
+        </div>
+        <div class="av-opt" data-key="carti">
+          <div class="av-img" style="background:#222;display:flex;align-items:center;justify-content:center;font-size:1.5rem">🎤</div>
+          <div class="av-name">CARTI</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-join" id="btn-join" onclick="joinGame()">JOIN →</button>
+  </div>
+</div>
+
+<!-- ══════════════ WAIT SCREEN (lobby) ══════════════ -->
+<div class="screen" id="wait-screen">
+  <img class="wait-av" id="wait-av" src="" alt="" style="display:none">
+  <div class="wait-av-emoji" id="wait-av-emoji">🎤</div>
+  <div class="wait-name" id="wait-name">—</div>
+  <div class="wait-code" id="wait-code">Room: —</div>
+  <div class="wait-status">Waiting for the host to start…</div>
+  <div class="wait-instructions">
+    <div class="inst-title">How does it work?</div>
+    <div class="inst-row">
+      <b>Normal questions</b><br>
+      The faster you answer correctly, the more points. Max 1000 pts.
+    </div>
+    <div class="inst-row" style="margin-top:.75rem">
+      <b>🔔 BUZZER (Question 5)</b><br>
+      First to answer correctly gets 1000 pts. Others get nothing.
+    </div>
+    <div class="inst-row" style="margin-top:.75rem">
+      <b>⚡ ALL IN (Final question)</b><br>
+      Decide before seeing the options whether to go ALL IN.<br>
+      ALL IN + correct = +2000 pts · ALL IN + wrong = −1000 pts
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ALL IN DECISION ══════════════ -->
+<div class="screen" id="allin-screen">
+  <div class="allin-title">⚡ ALL IN ⚡</div>
+  <div class="allin-sub">Final question — Bet before seeing the options</div>
+  <div class="allin-score">Your points: <span id="allin-pts">0</span></div>
+  <div class="allin-btns">
+    <button class="btn-allin yes" onclick="decideAllin(true)">⚡ ALL IN</button>
+    <button class="btn-allin no"  onclick="decideAllin(false)">Paso</button>
+  </div>
+  <div class="allin-decided" id="allin-decided" style="display:none">✓ Bet placed — waiting for host…</div>
+</div>
+
+<!-- ══════════════ BUZZER WAIT ══════════════ -->
+<div class="screen" id="buzzer-screen">
+  <div class="buzz-title">🔔<br>BUZZER</div>
+  <div class="buzz-sub">Question 5 · First to answer correctly wins</div>
+  <div class="buzz-wait">Waiting for the host to reveal options…</div>
+</div>
+
+<!-- ══════════════ QUESTION SCREEN ══════════════ -->
+<div class="screen" id="question-screen">
+  <div class="q-header">
+    <div class="q-num" id="q-num">Q1/10</div>
+    <div class="q-prog"><div class="q-prog-fill" id="q-prog-fill"></div></div>
+    <div class="q-mode-pill" id="q-mode-pill"></div>
+  </div>
+  <div class="q-timer-row">
+    <div class="q-timer-bar-wrap"><div class="q-timer-bar" id="q-timer-bar" style="width:100%"></div></div>
+    <div class="q-timer-num" id="q-timer-num">20</div>
+  </div>
+  <div class="q-section" id="q-section"></div>
+  <div class="q-text" id="q-text"></div>
+  <div class="q-img-wrap" id="q-img-wrap">
+    <img id="q-img" src="" alt="">
+  </div>
+  <div class="q-answers" id="q-answers"></div>
+  <div class="q-score-row">
+    <span>Points</span>
+    <span class="q-score-val" id="q-score">0</span>
+    <span style="margin-left:.5rem">Streak</span>
+    <span class="q-streak" id="q-streak">0🔥</span>
+  </div>
+</div>
+
+<!-- ══════════════ RESULT (post-question) ══════════════ -->
+<div class="screen" id="result-screen">
+  <div class="res-icon" id="res-icon">🎯</div>
+  <div class="res-msg" id="res-msg">—</div>
+  <div class="res-pts" id="res-pts">+0 pts</div>
+  <div class="res-wait">Waiting for next question…</div>
+  <div class="nearby-title">Nearby rankings</div>
+  <div class="nearby-list" id="nearby-list"></div>
+</div>
+
+<!-- ══════════════ FINAL SCREEN ══════════════ -->
+<div class="screen" id="final-screen">
+  <img class="final-av" id="final-av" src="" alt="" style="display:none">
+  <div class="final-name" id="final-name">—</div>
+  <div class="final-rank" id="final-rank">—</div>
+  <div class="final-score" id="final-score">0</div>
+  <div class="final-wait" id="final-wait">Waiting for results…</div>
+  <div class="final-ranking" id="final-ranking"></div>
+</div>
+
+<!-- ══════════════ KICKED SCREEN ══════════════ -->
+<div class="screen" id="kicked-screen">
+  <div class="kicked-title">YOU HAVE BEEN<br>KICKED</div>
+  <div class="kicked-msg">The host removed you from the game.<br>You can rejoin if you want.</div>
+  <button class="btn-back" onclick="resetToJoin()">BACK TO START</button>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+ *  TRAP QUIZ — PLAYER (credplay.html)
+ * ════════════════════════════════════════════════════════════════ */
+
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyAK2UNfOHUyl7YrYE0hI9slRZdlnpPQ96s',
+  authDomain: 'trap-quiz-67.firebaseapp.com',
+  projectId: 'trap-quiz-67',
+  storageBucket: 'trap-quiz-67.firebasestorage.app',
+  messagingSenderId: '1039849877202',
+  appId: '1:1039849877202:web:19d12db33ae928ab3a870b',
+  databaseURL: 'https://trap-quiz-67-default-rtdb.firebaseio.com'
+};
+
+/* Initialize Firebase once at load time */
+const _fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+const _db = firebase.database(_fbApp);
+
+/* ── STATE ── */
+let db, gameRef;
+let playerId = null;
+let playerName = '';
+let playerAvatar = 'rocky'; // key del avatar elegido
+let playerAvatarUrl = '';
+let myScore = 0;
+let myStreak = 0;
+let roomCode = '';
+let currentQIndex = -1;
+let answered = false;
+let myChoice = null;
+let timerInterval = null;
+let qStartTime = 0;
+let allinDecided = false;
+let allinWent = false;
+let currentQuestions = [];
+let gameListener = null;
+let kickListener = null;
+
+/* ── AVATAR DATA (se carga desde Firebase cuando el host lo sube) ── */
+let avatarData = { rocky: null, keef: null, carti: null };
+
+/* Leer roomCode de URL (?room=TRAP1) */
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const r = params.get('room');
+  if (r) {
+    document.getElementById('inp-code').value = r.toUpperCase();
+  }
+})();
+
+/* Selección de avatar en el join */
+document.getElementById('avatar-row').addEventListener('click', e => {
+  const opt = e.target.closest('.av-opt');
+  if (!opt) return;
+  document.querySelectorAll('.av-opt').forEach(o => o.classList.remove('sel'));
+  opt.classList.add('sel');
+  playerAvatar = opt.dataset.key;
+});
+
+/* ══════════════════════════════════════════════════════════════
+ *  JOIN
+ * ══════════════════════════════════════════════════════════════ */
+function joinGame() {
+  playerName = document.getElementById('inp-name').value.trim();
+  roomCode = document.getElementById('inp-code').value.trim().toUpperCase();
+
+  if (!playerName) { alert('Escribe your name'); return; }
+  if (!roomCode)    { alert('Enter the room code'); return; }
+
+  const btn = document.getElementById('btn-join');
+  btn.disabled = true;
+  btn.textContent = 'Connecting...';
+
+  db = _db;
+  gameRef = db.ref('rooms/' + roomCode);
+
+  /* Load avatars FIRST, then register player so avatarUrl is correct */
+  gameRef.child('avatars').once('value').then(snap => {
+    const avs = snap.val() || {};
+    avatarData = avs;
+    renderAvatarPicker(avs);
+    playerAvatarUrl = avatarData[playerAvatar] || '';
+
+    /* Load questions */
+    return gameRef.child('questions').once('value');
+  }).then(snap => {
+    currentQuestions = snap.val() || [];
+
+    /* Register player with correct avatarUrl */
+    playerId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+    return gameRef.child('players/' + playerId).set({
+      name: playerName,
+      avatarKey: playerAvatar,
+      avatarUrl: playerAvatarUrl,
+      score: 0,
+      streak: 0
+    });
+  }).then(() => {
+    btn.disabled = false;
+    btn.textContent = 'JOIN →';
+    showScreen('wait-screen');
+    renderWaitScreen();
+    listenKick();
+    listenGame();
+  }).catch(e => {
+    alert('Error: ' + e.message + '\n\nCheck the room code and try again.');
+    btn.disabled = false;
+    btn.textContent = 'JOIN →';
+    playerId = null;
+  });
+}
+
+function renderAvatarPicker(avs) {
+  const keys = { rocky: 'ROCKY', keef: 'KEEF', carti: 'CARTI' };
+  const rows = Object.entries(keys).map(([k, label]) =>
+    `<div class="av-opt${playerAvatar === k ? ' sel' : ''}" data-key="${k}">
+      ${avs[k]
+        ? `<img class="av-img" src="${avs[k]}" width="60" height="60">`
+        : `<div class="av-img" style="background:#222;display:flex;align-items:center;justify-content:center;font-size:1.5rem">🎤</div>`}
+      <div class="av-name">${label}</div>
+    </div>`
+  ).join('');
+  document.getElementById('avatar-row').innerHTML = rows;
+
+  // Actualizar URL de avatar al elegir
+  document.getElementById('avatar-row').onclick = e => {
+    const opt = e.target.closest('.av-opt');
+    if (!opt) return;
+    document.querySelectorAll('.av-opt').forEach(o => o.classList.remove('sel'));
+    opt.classList.add('sel');
+    playerAvatar = opt.dataset.key;
+    playerAvatarUrl = avatarData[playerAvatar] || '';
+    if (playerId) {
+      gameRef.child('players/' + playerId + '/avatarKey').set(playerAvatar);
+      gameRef.child('players/' + playerId + '/avatarUrl').set(playerAvatarUrl);
+    }
+  };
+}
+
+function renderWaitScreen() {
+  document.getElementById('wait-name').textContent = playerName;
+  document.getElementById('wait-code').textContent = 'Room: ' + roomCode;
+  const url = playerAvatarUrl || (avatarData[playerAvatar] || '');
+  if (url) {
+    document.getElementById('wait-av').src = url;
+    document.getElementById('wait-av').style.display = 'block';
+    document.getElementById('wait-av-emoji').style.display = 'none';
+  } else {
+    document.getElementById('wait-av').style.display = 'none';
+    document.getElementById('wait-av-emoji').style.display = 'block';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  KICK DETECTION
+ * ══════════════════════════════════════════════════════════════ */
+function listenKick() {
+  if (!playerId) return;
+  kickListener = gameRef.child('kicked/' + playerId);
+  kickListener.on('value', snap => {
+    if (snap.val()?.kicked === true) {
+      kickListener.off();
+      showKicked();
+    }
+  });
+}
+
+function showKicked() {
+  clearInterval(timerInterval);
+  if (gameListener) gameRef.off('value', gameListener);
+  showScreen('kicked-screen');
+}
+
+function resetToJoin() {
+  if (playerId) {
+    gameRef.child('players/' + playerId).remove().catch(() => {});
+    gameRef.child('answers/' + playerId).remove().catch(() => {});
+    gameRef.child('kicked/' + playerId).remove().catch(() => {});
+    gameRef.child('allinDecisions/' + playerId).remove().catch(() => {});
+  }
+  if (gameListener) gameRef.off('value', gameListener);
+  clearInterval(timerInterval);
+  // Reset state
+  playerId = null; playerName = ''; roomCode = '';
+  myScore = 0; myStreak = 0; currentQIndex = -1;
+  answered = false; allinDecided = false;
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-code').value = '';
+  showScreen('join-screen');
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  GAME LISTENER
+ * ══════════════════════════════════════════════════════════════ */
+function listenGame() {
+  gameListener = gameRef.on('value', snap => {
+    const g = snap.val();
+    if (!g) return;
+
+    /* Sync score del servidor — solo cuando NO estamos revelando resultado */
+    const me = g.players?.[playerId];
+    if (me && g.status !== 'revealed') {
+      myScore = me.score || 0;
+      myStreak = me.streak || 0;
+    }
+
+    /* Sync preguntas si las tenemos */
+    if (g.questions && g.questions.length > 0) currentQuestions = g.questions;
+
+    const status = g.status;
+    const qIdx = g.currentQ;
+
+    if (status === 'lobby') {
+      showScreen('wait-screen');
+      return;
+    }
+
+    /* ── ALL IN: decisión ── */
+    if (status === 'question_thinking' && g.mode === 'allin') {
+      if (allinDecided) return;
+      document.getElementById('allin-pts').textContent = myScore;
+      showScreen('allin-screen');
+      document.getElementById('allin-decided').style.display = 'none';
+      return;
+    }
+
+    /* ── BUZZER: espera ── */
+    if (status === 'question_thinking' && g.mode === 'buzzer') {
+      showScreen('buzzer-screen');
+      return;
+    }
+
+    /* ── QUESTION activa ── */
+    if (status === 'question') {
+      const q = currentQuestions[qIdx];
+      if (!q) return;
+
+      if (qIdx !== currentQIndex) {
+        // Nueva pregunta
+        currentQIndex = qIdx;
+        answered = false;
+        myChoice = null;
+        allinDecided = false;
+        allinWent = false;
+        clearInterval(timerInterval);
+        renderQuestion(qIdx, q, g.questionStart || Date.now());
+      } else if (g.optionsVisible && !answered) {
+        // Opciones recién visibles (buzzer/allin — antes estaban ocultas)
+        renderQuestion(qIdx, q, g.questionStart || Date.now());
+      }
+      return;
+    }
+
+    /* ── REVEALED ── */
+    if (status === 'revealed') {
+      clearInterval(timerInterval);
+      const q = currentQuestions[qIdx];
+      if (q) showResult(q, g.correctAnswer, g.scores);
+      return;
+    }
+
+    /* ── RESULTS (finales) ── */
+    if (status === 'results_pending' || status === 'results_losers' ||
+        status === 'results_3rd' || status === 'results_2nd' || status === 'results') {
+      showFinal(g);
+      return;
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  ALL IN DECISION
+ * ══════════════════════════════════════════════════════════════ */
+function decideAllin(goAllin) {
+  if (allinDecided) return;
+  allinDecided = true;
+  allinWent = goAllin;
+
+  document.getElementById('allin-decided').style.display = 'block';
+  document.querySelectorAll('.btn-allin').forEach(b => b.disabled = true);
+
+  if (goAllin) {
+    gameRef.child('allinDecisions/' + playerId).set({ allin: true, time: Date.now() });
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  RENDER QUESTION
+ * ══════════════════════════════════════════════════════════════ */
+function renderQuestion(idx, q, startTime) {
+  showScreen('question-screen');
+  qStartTime = startTime;
+
+  document.getElementById('q-num').textContent = 'Q' + (idx + 1) + '/' + currentQuestions.length;
+  document.getElementById('q-prog-fill').style.width = (((idx + 1) / currentQuestions.length) * 100) + '%';
+  document.getElementById('q-section').textContent = q.section || '';
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('q-score').textContent = myScore;
+  document.getElementById('q-streak').textContent = myStreak + '🔥';
+
+  /* Mode pill */
+  const pill = document.getElementById('q-mode-pill');
+  pill.className = 'q-mode-pill';
+  if (q.mode === 'buzzer') { pill.classList.add('buzzer'); pill.textContent = '🔔 BUZZER'; }
+  else if (q.mode === 'allin') { pill.classList.add('allin'); pill.textContent = '⚡ ALL IN'; }
+
+  /* Imagen */
+  const imgWrap = document.getElementById('q-img-wrap');
+  if (q.image) {
+    document.getElementById('q-img').src = q.image;
+    imgWrap.classList.add('show');
+  } else {
+    imgWrap.classList.remove('show');
+  }
+
+  /* Respuestas */
+  const letters = ['A', 'B', 'C', 'D'];
+  document.getElementById('q-answers').innerHTML = (q.options || []).map((opt, i) =>
+    `<button class="ans-btn" id="pans-${i}" onclick="submitAnswer(${i})" ${answered ? 'disabled' : ''}>
+      <span class="ans-letter">${letters[i]}</span>${opt}
+    </button>`
+  ).join('');
+
+  /* Si ya respondí en esta pregunta, marcar */
+  if (answered && myChoice !== null) {
+    document.getElementById('pans-' + myChoice)?.classList.add('selected');
+  }
+
+  /* Timer */
+  clearInterval(timerInterval);
+  const elapsed = Math.max(0, (Date.now() - startTime) / 1000);
+  const remaining = Math.max(0, 20 - elapsed);
+  startPlayerTimer(remaining, 20);
+}
+
+function startPlayerTimer(remaining, total) {
+  const barEl = document.getElementById('q-timer-bar');
+  const numEl = document.getElementById('q-timer-num');
+  let t = remaining;
+
+  barEl.style.transition = 'none';
+  barEl.style.width = (t / total * 100) + '%';
+  barEl.style.background = 'var(--gold)';
+  numEl.textContent = Math.ceil(t);
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    t -= 0.1;
+    const pct = Math.max(0, t / total * 100);
+    barEl.style.transition = 'width .1s linear,background .3s';
+    barEl.style.width = pct + '%';
+    numEl.textContent = Math.max(0, Math.ceil(t));
+    if (t <= 5) barEl.style.background = 'var(--red)';
+    if (t <= 0) clearInterval(timerInterval);
+  }, 100);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  SUBMIT ANSWER
+ * ══════════════════════════════════════════════════════════════ */
+function submitAnswer(choice) {
+  if (answered) return;
+  answered = true;
+  myChoice = choice;
+
+  // Visual
+  document.querySelectorAll('.ans-btn').forEach(b => b.disabled = true);
+  document.getElementById('pans-' + choice)?.classList.add('selected');
+
+  // Sonido
+  playChooseSound();
+
+  // Firebase
+  gameRef.child('answers/' + playerId).set({
+    choice: choice,
+    time: Date.now()
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  SHOW RESULT (post-question)
+ * ══════════════════════════════════════════════════════════════ */
+function showResult(q, correctAnswer, scores) {
+  showScreen('result-screen');
+  clearInterval(timerInterval);
+
+  const isCorrect = myChoice === correctAnswer;
+  const newScore = scores?.[playerId]?.score ?? myScore;
+  const gained = Math.max(0, newScore - myScore); // always positive or zero
+  myScore = newScore;
+  // Update streak from server scores
+  const newStreak = scores?.[playerId]?.streak ?? (isCorrect ? myStreak + 1 : 0);
+  myStreak = newStreak;
+
+  document.getElementById('res-icon').textContent = isCorrect ? '✅' : '❌';
+  document.getElementById('res-msg').textContent = isCorrect ? 'CORRECT!' : 'WRONG';
+  document.getElementById('res-pts').textContent = (gained > 0 ? '+' : '') + gained + ' pts' + (isCorrect && myStreak > 1 ? ' 🔥x' + myStreak : '');
+
+  if (isCorrect) playCorrectSound();
+  else playWrongSound();
+
+  triggerFlash(isCorrect ? 'rgba(0,255,136,0.15)' : 'rgba(255,45,85,0.1)');
+
+  // Ranking cercano
+  if (scores) {
+    const sorted = Object.entries(scores).sort(([, a], [, b]) => (b.score || 0) - (a.score || 0));
+    const myRank = sorted.findIndex(([pid]) => pid === playerId);
+    // Mostrar 2 arriba, yo, 2 abajo
+    const from = Math.max(0, myRank - 2);
+    const to = Math.min(sorted.length, myRank + 3);
+    document.getElementById('nearby-list').innerHTML = sorted.slice(from, to).map(([pid, p], relIdx) => {
+      const rank = from + relIdx + 1;
+      return `<div class="nb-row ${pid === playerId ? 'me' : ''}">
+        <div class="nb-pos">${rank}</div>
+        <div class="nb-name">${p.name || '?'}</div>
+        <div class="nb-score">${p.score || 0}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  FINAL SCREEN
+ * ══════════════════════════════════════════════════════════════ */
+function showFinal(g) {
+  showScreen('final-screen');
+  const scores = g.scores || {};
+  const sorted = Object.entries(scores).sort(([, a], [, b]) => (b.score || 0) - (a.score || 0));
+  const myRank = sorted.findIndex(([pid]) => pid === playerId) + 1;
+  const me = scores[playerId];
+  const finalScore = me?.score ?? myScore;
+
+  document.getElementById('final-name').textContent = playerName;
+  document.getElementById('final-score').textContent = finalScore;
+
+  // Avatar
+  const url = playerAvatarUrl || avatarData[playerAvatar] || '';
+  if (url) {
+    document.getElementById('final-av').src = url;
+    document.getElementById('final-av').style.display = 'block';
+  }
+
+  // Rango
+  const rankEl = document.getElementById('final-rank');
+  const medals = ['🏆 WINNER', '🥈 2ND PLACE', '🥉 3RD PLACE'];
+  if (myRank <= 3) {
+    rankEl.textContent = medals[myRank - 1];
+    rankEl.className = 'final-rank pos' + myRank;
+  } else {
+    rankEl.textContent = 'Rank #' + myRank;
+    rankEl.className = 'final-rank';
+  }
+
+  // Reveal status
+  const revealedRank = g.revealedRank || 0;
+  const bottom3 = g.bottom3 ? JSON.parse(g.bottom3) : [];
+  const isBottom3 = bottom3.includes(playerName);
+
+  let waitText = 'Waiting for results…';
+  if (g.status === 'results_losers' && isBottom3) waitText = 'Watch the main screen…';
+  if (g.status === 'results_3rd' && myRank === 3) waitText = '🥉 3rd place!';
+  if (g.status === 'results_2nd' && myRank === 2) waitText = '🥈 2nd place!';
+  if (g.status === 'results' && myRank === 1) waitText = '🏆 WINNER!';
+  document.getElementById('final-wait').textContent = waitText;
+
+  // Ranking completo (cuando se revela)
+  if (g.status === 'results') {
+    document.getElementById('final-ranking').innerHTML = sorted.map(([pid, p], i) =>
+      `<div class="fr-row ${pid === playerId ? 'me' : ''}">
+        <div class="fr-pos">${i + 1}</div>
+        <div class="fr-name">${p.name || '?'}</div>
+        <div class="fr-score">${p.score || 0}</div>
+      </div>`
+    ).join('');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  UTILS
+ * ══════════════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function triggerFlash(color) {
+  const f = document.getElementById('flash');
+  f.style.background = color; f.classList.add('on');
+  setTimeout(() => f.classList.remove('on'), 150);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  AUDIO (efectos generados — no necesitan archivos)
+ * ══════════════════════════════════════════════════════════════ */
+function playChooseSound() {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.connect(g); g.connect(ac.destination);
+  o.type = 'sine'; o.frequency.value = 660;
+  g.gain.setValueAtTime(0.15, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+  o.start(); o.stop(ac.currentTime + 0.2);
+}
+
+function playCorrectSound() {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  [523, 659, 784, 1047].forEach((f, i) => {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination); o.type = 'triangle'; o.frequency.value = f;
+    const d = i * 0.07;
+    g.gain.setValueAtTime(0.22, ac.currentTime + d);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + d + 0.38);
+    o.start(ac.currentTime + d); o.stop(ac.currentTime + d + 0.42);
+  });
+}
+
+function playWrongSound() {
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  // Grave y triste
+  [100, 85, 70].forEach((f, i) => {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination); o.type = 'sawtooth'; o.frequency.value = f;
+    const d = i * 0.1;
+    g.gain.setValueAtTime(0.25, ac.currentTime + d);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + d + 0.35);
+    o.start(ac.currentTime + d); o.stop(ac.currentTime + d + 0.4);
+  });
+}
+</script>
+</body>
+</html>
